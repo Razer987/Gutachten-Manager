@@ -9,7 +9,7 @@
  *   app.use(errorMiddleware)    // MUSS nach allen anderen Middlewares kommen!
  */
 
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 
 import { logger } from '@/config/logger';
@@ -95,4 +95,16 @@ export function errorMiddleware(
       message: 'Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es erneut.',
     },
   });
+}
+
+/**
+ * Wraps an async Express handler so that errors are forwarded to next().
+ * Without this wrapper, unhandled promise rejections crash the process.
+ */
+export function asyncHandler(
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
+): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    fn(req, res, next).catch(next);
+  };
 }
