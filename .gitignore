@@ -1,0 +1,104 @@
+# =============================================================================
+# .gitignore — Gutachten-Manager
+# =============================================================================
+# Dateien und Ordner die NICHT in Git gespeichert werden sollen.
+# Enthält: Build-Artefakte, Abhängigkeiten, Secrets, Logs, OS-Dateien.
+# =============================================================================
+
+# -------------------------------------
+# Abhängigkeiten (Dependencies)
+# -------------------------------------
+node_modules/
+.pnpm-store/
+
+# -------------------------------------
+# Build-Artefakte
+# -------------------------------------
+.next/
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# -------------------------------------
+# Umgebungsvariablen (NIEMALS committen!)
+# -------------------------------------
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# Ausnahme: Beispiel-Dateien DÜRFEN committet werden
+!.env.example
+!.env.*.example
+
+# -------------------------------------
+# Datenbank
+# -------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+
+# -------------------------------------
+# Logs
+# -------------------------------------
+*.log
+logs/*.log
+logs/*.log.*
+# Ausnahme: MASTER_LOG.md bleibt in Git
+!logs/MASTER_LOG.md
+
+# -------------------------------------
+# Test-Artefakte
+# -------------------------------------
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# -------------------------------------
+# Uploads (lokale Dateien, nicht in Git)
+# -------------------------------------
+uploads/
+apps/api/uploads/
+
+# -------------------------------------
+# Turborepo
+# -------------------------------------
+.turbo/
+
+# -------------------------------------
+# OS-spezifische Dateien
+# -------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# -------------------------------------
+# IDE & Editor
+# -------------------------------------
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Ausnahme: Projekt-spezifische VS-Code-Einstellungen erlaubt
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# -------------------------------------
+# Docker
+# -------------------------------------
+# (Docker-Volumes werden nicht committed)
+
+# -------------------------------------
+# Patches (applied.log wird NICHT committed — ist lokal)
+# -------------------------------------
+patches/applied.log

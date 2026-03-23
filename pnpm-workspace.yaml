@@ -1,0 +1,16 @@
+# =============================================================================
+# pnpm Workspace Konfiguration
+# =============================================================================
+# Definiert welche Pakete Teil des Monorepos sind.
+# Alle Verzeichnisse unter 'apps/' und 'packages/' werden als Workspace-Pakete
+# behandelt und können sich gegenseitig als Abhängigkeiten referenzieren.
+#
+# Verwendung:
+#   pnpm install                 # Alle Pakete installieren
+#   pnpm --filter web dev        # Nur 'web' App starten
+#   pnpm --filter api build      # Nur 'api' App bauen
+# =============================================================================
+
+packages:
+  - "apps/*"
+  - "packages/*"
