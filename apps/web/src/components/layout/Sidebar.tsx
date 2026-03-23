@@ -12,6 +12,7 @@
 import React from 'react';
 
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import BadgeIcon from '@mui/icons-material/Badge';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard', href: '/dashboard', icon: <DashboardIcon /> },
   { label: 'Gutachten', href: '/gutachten', icon: <DescriptionIcon /> },
   { label: 'Kunden', href: '/kunden', icon: <PeopleIcon /> },
+  { label: 'Gutachter', href: '/gutachter', icon: <BadgeIcon /> },
   { label: 'Kalender', href: '/kalender', icon: <CalendarMonthIcon /> },
 ] as const;
 

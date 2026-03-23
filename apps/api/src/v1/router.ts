@@ -12,11 +12,21 @@
 import { Router } from 'express';
 
 import { env } from '@/config/env';
-
-// Feature-Module werden nach und nach importiert
-// (werden in späteren Patches hinzugefügt)
-// import { gutachtenRouter } from '@/modules/gutachten/gutachten.routes';
-// import { kundenRouter } from '@/modules/kunden/kunden.routes';
+import { adminRouter } from '@/modules/admin/admin.routes';
+import { aufgabenRouter } from '@/modules/aufgaben/aufgaben.routes';
+import { auditRouter } from '@/modules/audit/audit.routes';
+import { dashboardRouter } from '@/modules/dashboard/dashboard.routes';
+import { dateienRouter } from '@/modules/dateien/dateien.routes';
+import { fahrzeugeRouter } from '@/modules/fahrzeuge/fahrzeuge.routes';
+import { gutachtenRouter } from '@/modules/gutachten/gutachten.routes';
+import { gutachterRouter } from '@/modules/gutachter/gutachter.routes';
+import { kundenRouter } from '@/modules/kunden/kunden.routes';
+import { notizenRouter } from '@/modules/notizen/notizen.routes';
+import { personenRouter } from '@/modules/personen/personen.routes';
+import { schadenRouter } from '@/modules/schaden/schaden.routes';
+import { sucheRouter } from '@/modules/suche/suche.routes';
+import { termineRouter } from '@/modules/termine/termine.routes';
+import { unfallRouter } from '@/modules/unfall/unfall.routes';
 
 const router = Router();
 
@@ -71,15 +81,27 @@ router.get('/', (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Feature-Module (werden schrittweise hinzugefügt)
+// Feature-Module
 // ---------------------------------------------------------------------------
-// router.use('/gutachten', gutachtenRouter);
-// router.use('/kunden', kundenRouter);
-// router.use('/gutachter', gutachterRouter);
-// router.use('/kalender', kalenderRouter);
-// router.use('/suche', sucheRouter);
-// router.use('/dashboard', dashboardRouter);
-// router.use('/admin', adminRouter);
-// router.use('/backup', backupRouter);
+
+// Haupt-Ressourcen
+router.use('/gutachten', gutachtenRouter);
+router.use('/kunden', kundenRouter);
+router.use('/gutachter', gutachterRouter);
+router.use('/termine', termineRouter);
+router.use('/kalender', termineRouter);
+router.use('/dashboard', dashboardRouter);
+router.use('/suche', sucheRouter);
+router.use('/admin', adminRouter);
+
+// Sub-Ressourcen für Gutachten
+router.use('/gutachten/:gutachtenId/unfall', unfallRouter);
+router.use('/gutachten/:gutachtenId/fahrzeuge', fahrzeugeRouter);
+router.use('/gutachten/:gutachtenId/personen', personenRouter);
+router.use('/gutachten/:gutachtenId/schaden', schadenRouter);
+router.use('/gutachten/:gutachtenId/notizen', notizenRouter);
+router.use('/gutachten/:gutachtenId/aufgaben', aufgabenRouter);
+router.use('/gutachten/:gutachtenId/dateien', dateienRouter);
+router.use('/gutachten/:gutachtenId/audit', auditRouter);
 
 export { router as v1Router };
