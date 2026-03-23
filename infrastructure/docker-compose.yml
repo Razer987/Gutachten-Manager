@@ -1,0 +1,158 @@
+# =============================================================================
+# docker-compose.yml — Produktions-Konfiguration
+# =============================================================================
+# Startet alle Services für den Produktionsbetrieb.
+#
+# Verwendung:
+#   docker compose up -d          # Alle Services im Hintergrund starten
+#   docker compose down           # Alle Services stoppen
+#   docker compose logs -f        # Live-Logs anzeigen
+#   docker compose ps             # Status aller Services
+#
+# Services:
+#   nginx  — Reverse-Proxy (Port 80)
+#   web    — Next.js Frontend (intern Port 3000)
+#   api    — Express.js Backend (intern Port 4000)
+#   db     — PostgreSQL Datenbank (Port 5432)
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # NGINX — Reverse-Proxy (einziger öffentlicher Einstiegspunkt)
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: gutachten_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"  # Für zukünftiges HTTPS/SSL
+    volumes:
+      - ./infrastructure/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - gutachten_network
+
+  # ---------------------------------------------------------------------------
+  # WEB — Next.js Frontend
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api/v1}
+    container_name: gutachten_web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api/v1}
+      INTERNAL_API_URL: http://api:4000/api/v1
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - gutachten_network
+
+  # ---------------------------------------------------------------------------
+  # API — Express.js Backend
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    container_name: gutachten_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME:-gutachten_manager}?schema=public
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
+      UPLOAD_DIR: /app/uploads
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_DIR: /app/logs
+      BACKUP_DIR: /app/backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_CRON_SCHEDULE: ${BACKUP_CRON_SCHEDULE:-0 2 * * *}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+      - backups_data:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - gutachten_network
+
+  # ---------------------------------------------------------------------------
+  # DB — PostgreSQL Datenbank
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: gutachten_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-gutachten_manager}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      # Performance-Optimierung für diese Anwendungsgröße
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=de_DE.UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # Direkter DB-Zugriff (für Prisma Studio / Debugging)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME:-gutachten_manager}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - gutachten_network
+
+# =============================================================================
+# VOLUMES — Persistente Datenspeicherung
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+    name: gutachten_postgres_data
+  uploads_data:
+    driver: local
+    name: gutachten_uploads
+  logs_data:
+    driver: local
+    name: gutachten_logs
+  backups_data:
+    driver: local
+    name: gutachten_backups
+  nginx_logs:
+    driver: local
+    name: gutachten_nginx_logs
+
+# =============================================================================
+# NETZWERK
+# =============================================================================
+networks:
+  gutachten_network:
+    driver: bridge
+    name: gutachten_network

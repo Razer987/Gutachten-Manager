@@ -1,0 +1,46 @@
+# =============================================================================
+# docker-compose.test.yml — Test-Konfiguration
+# =============================================================================
+# Isolierte Umgebung für automatisierte Tests (CI/CD).
+#
+# Verwendung:
+#   docker compose -f docker-compose.test.yml up --exit-code-from test-runner
+# =============================================================================
+
+services:
+
+  db_test:
+    image: postgres:16-alpine
+    container_name: gutachten_db_test
+    environment:
+      POSTGRES_DB: gutachten_manager_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - test_network
+
+  # Test-Runner
+  test_runner:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: builder
+    container_name: gutachten_test_runner
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://test:test_password@db_test:5432/gutachten_manager_test?schema=public
+    depends_on:
+      db_test:
+        condition: service_healthy
+    command: ["pnpm", "test"]
+    networks:
+      - test_network
+
+networks:
+  test_network:
+    driver: bridge

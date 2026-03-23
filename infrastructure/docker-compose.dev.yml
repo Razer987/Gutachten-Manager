@@ -1,0 +1,36 @@
+# =============================================================================
+# docker-compose.dev.yml — Entwicklungs-Konfiguration
+# =============================================================================
+# Verwendet für lokale Entwicklung mit Hot-Reload.
+# Quellcode wird als Volume eingebunden — Änderungen wirken sofort.
+#
+# Verwendung:
+#   docker compose -f docker-compose.dev.yml up
+# =============================================================================
+
+services:
+
+  # Nur die Datenbank läuft in Docker
+  # Frontend und Backend laufen nativ für schnellen Hot-Reload
+  db:
+    image: postgres:16-alpine
+    container_name: gutachten_db_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gutachten_manager_dev
+      POSTGRES_USER: ${DATABASE_USER:-dev}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-dev_password}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+    driver: local
+    name: gutachten_postgres_dev
