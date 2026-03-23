@@ -1,0 +1,591 @@
+// =============================================================================
+// schema.prisma — Gutachten-Manager Datenbankschema
+// =============================================================================
+// Dieses Schema definiert die gesamte Datenbankstruktur des Gutachten-Managers.
+//
+// Tabellen-Übersicht:
+//   Kern:          Gutachten, GutachtenStatus
+//   Beteiligte:    Kunden, Gutachter, Fahrzeuge, Personen, Zeugen
+//   Unfall:        UnfallOrt, Wetterdaten, Polizeidaten
+//   Finanzen:      Schadensposten
+//   Medien:        Dateien (Uploads)
+//   Workflow:      Aufgaben, Notizen, Termine (Kalender)
+//   System:        AuditLog, FeatureFlags, Tenants
+//
+// Migrations ausführen:
+//   pnpm db:migrate:dev    (Entwicklung — erstellt Migration)
+//   pnpm db:migrate        (Produktion — wendet Migration an)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+/// Die 7 Workflow-Stufen eines Gutachtens
+enum GutachtenStatus {
+  AUFGENOMMEN   // Erstkontakt, Daten werden erfasst
+  BEAUFTRAGT    // Auftrag erteilt, Gutachter zugewiesen
+  BESICHTIGUNG  // Vor-Ort-Besichtigung geplant oder durchgeführt
+  ENTWURF       // Gutachten wird erstellt
+  FREIGABE      // Entwurf liegt vor, wartet auf Freigabe
+  FERTIG        // Gutachten abgeschlossen und übergeben
+  ARCHIV        // Archiviert
+}
+
+/// Typ einer am Unfall beteiligten Person
+enum PersonTyp {
+  FAHRER          // Fahrzeugführer
+  BEIFAHRER       // Beifahrer
+  FUSSGAENGER     // Fußgänger
+  ZEUGE           // Zeuge (nicht direkt beteiligt)
+  VERLETZTE       // Verletzte Person
+}
+
+/// Wetterbedingungen zum Unfallzeitpunkt
+enum Wetterlage {
+  KLAR
+  BEWOELKT
+  REGEN
+  STARKREGEN
+  SCHNEE
+  GLAETTE
+  NEBEL
+  STURM
+}
+
+/// Straßenzustand zum Unfallzeitpunkt
+enum Strassenzustand {
+  TROCKEN
+  NASS
+  SCHNEEBEDECKT
+  VEREIST
+  VERSCHMUTZT
+}
+
+/// Sichtverhältnisse zum Unfallzeitpunkt
+enum Sichtverhaeltnis {
+  GUT        // > 100m Sicht
+  MITTEL     // 50-100m Sicht
+  SCHLECHT   // < 50m Sicht
+  NACHT
+  DAEMMERUNG
+}
+
+/// Priorität einer Aufgabe
+enum AufgabePrioritaet {
+  NIEDRIG
+  NORMAL
+  HOCH
+  KRITISCH
+}
+
+/// Typ eines Audit-Log-Eintrags
+enum AuditAktion {
+  ERSTELLT
+  AKTUALISIERT
+  GELOESCHT
+  STATUS_GEAENDERT
+  DATEI_HOCHGELADEN
+  DATEI_GELOESCHT
+  KOMMENTAR_HINZUGEFUEGT
+}
+
+// =============================================================================
+// KERN-TABELLEN
+// =============================================================================
+
+/// Haupttabelle: Repräsentiert ein einzelnes Gutachten
+model Gutachten {
+  id             String          @id @default(cuid())
+  /// Eindeutiges Aktenzeichen (auto: GA-2026-001, oder manuell)
+  aktenzeichen   String          @unique
+  /// Kurzer Titel/Betreff des Gutachtens
+  titel          String
+  /// Detaillierte Beschreibung (Rich-Text HTML von TipTap)
+  beschreibung   String?         @db.Text
+  /// Aktueller Workflow-Status
+  status         GutachtenStatus @default(AUFGENOMMEN)
+  /// Fälligkeitsdatum (Abgabefrist)
+  frist          DateTime?
+  /// Datum der Auftragserteilung
+  auftragsdatum  DateTime?
+  /// Datum der Fertigstellung
+  abschlussdatum DateTime?
+
+  /// Auftraggeber (Kunde)
+  kundeId        String?
+  kunde          Kunde?          @relation(fields: [kundeId], references: [id])
+
+  /// Zuständiger Gutachter
+  gutachterId    String?
+  gutachter      Gutachter?      @relation(fields: [gutachterId], references: [id])
+
+  /// Verknüpfte Gutachten (z.B. Folge-Gutachten)
+  verwandteGutachten    Gutachten[]   @relation("GutachtenVerknuepfung")
+  verwandteMitGutachten Gutachten[]   @relation("GutachtenVerknuepfung")
+
+  /// Unfalldaten
+  unfall         Unfall?
+
+  /// Beteiligte Fahrzeuge
+  fahrzeuge      Fahrzeug[]
+
+  /// Beteiligte Personen & Zeugen
+  personen       Person[]
+
+  /// Schadensposten
+  schadensposten Schadensposten[]
+
+  /// Hochgeladene Dateien
+  dateien        Datei[]
+
+  /// Interne Notizen
+  notizen        Notiz[]
+
+  /// Aufgaben/To-Dos
+  aufgaben       Aufgabe[]
+
+  /// Kalender-Termine
+  termine        Termin[]
+
+  /// Änderungshistorie
+  auditLogs      AuditLog[]
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status])
+  @@index([frist])
+  @@index([kundeId])
+  @@index([gutachterId])
+  @@index([aktenzeichen])
+  @@map("gutachten")
+}
+
+// =============================================================================
+// BETEILIGTE PERSONEN & ORGANISATIONEN
+// =============================================================================
+
+/// Auftraggeber / Kunde — vollständige CRM-Entität
+model Kunde {
+  id             String      @id @default(cuid())
+  /// Vorname (bei Privatpersonen)
+  vorname        String?
+  /// Nachname / Firmenname
+  nachname       String
+  /// Firmenname (falls Unternehmen)
+  firma          String?
+  /// E-Mail-Adresse
+  email          String?
+  /// Telefonnummer
+  telefon        String?
+  /// Mobilnummer
+  mobil          String?
+  /// Straße und Hausnummer
+  strasse        String?
+  /// Postleitzahl
+  plz            String?
+  /// Stadt
+  stadt          String?
+  /// Land (Standard: Deutschland)
+  land           String?     @default("Deutschland")
+  /// Interne Notizen zum Kunden
+  notizen        String?     @db.Text
+
+  /// Zugeordnete Gutachten
+  gutachten      Gutachten[]
+
+  /// Kontakthistorie
+  kontakthistorie KontaktHistorie[]
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([nachname])
+  @@index([email])
+  @@map("kunden")
+}
+
+/// Kontakthistorie für CRM
+model KontaktHistorie {
+  id         String   @id @default(cuid())
+  kundeId    String
+  kunde      Kunde    @relation(fields: [kundeId], references: [id], onDelete: Cascade)
+  /// Art des Kontakts (Telefon, E-Mail, Post, Persönlich)
+  art        String
+  /// Inhalt des Kontakts
+  inhalt     String   @db.Text
+  /// Wer hat den Kontakt durchgeführt
+  bearbeiter String?
+  kontaktDat DateTime @default(now())
+
+  @@index([kundeId])
+  @@map("kontakt_historie")
+}
+
+/// Gutachter / Sachverständiger
+model Gutachter {
+  id         String      @id @default(cuid())
+  vorname    String
+  nachname   String
+  email      String?
+  telefon    String?
+  /// Spezialisierungen (kommagetrennt, z.B. "Unfallanalyse, KFZ-Bewertung")
+  fachgebiet String?
+
+  gutachten  Gutachten[]
+
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([nachname])
+  @@map("gutachter")
+}
+
+/// Am Unfall beteiligte Person oder Zeuge
+model Person {
+  id           String    @id @default(cuid())
+  gutachtenId  String
+  gutachten    Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  typ          PersonTyp
+  vorname      String
+  nachname     String
+  geburtsdatum DateTime?
+  strasse      String?
+  plz          String?
+  stadt        String?
+  telefon      String?
+  email        String?
+
+  /// Führerscheinnummer (bei Fahrern)
+  fuehrerschein String?
+  /// Führerscheinklasse (z.B. B, BE, C)
+  fuehrerscheinklasse String?
+
+  /// Aussage des Zeugen (nur bei PersonTyp.ZEUGE)
+  zeugenaussage String? @db.Text
+
+  /// Verbundenes Fahrzeug (bei Fahrern)
+  fahrzeugId    String?
+  fahrzeug      Fahrzeug? @relation(fields: [fahrzeugId], references: [id])
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([gutachtenId])
+  @@map("personen")
+}
+
+// =============================================================================
+// FAHRZEUGE
+// =============================================================================
+
+/// Am Unfall beteiligtes Fahrzeug
+model Fahrzeug {
+  id              String    @id @default(cuid())
+  gutachtenId     String
+  gutachten       Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Amtliches Kennzeichen (z.B. M-AB 1234)
+  kennzeichen     String
+  /// Fahrzeugidentifikationsnummer (FIN/VIN)
+  fahrgestell     String?
+  /// Fahrzeugmarke (z.B. BMW, Mercedes)
+  marke           String
+  /// Fahrzeugmodell (z.B. 3er, C-Klasse)
+  modell          String
+  /// Baujahr
+  baujahr         Int?
+  /// Fahrzeugfarbe
+  farbe           String?
+  /// Kraftstoffart
+  kraftstoff      String?
+
+  /// KFZ-Versicherung
+  versicherung    String?
+  /// Versicherungsscheinnummer
+  versicherungsNr String?
+
+  /// Fahrer/Beteiligte Personen
+  personen        Person[]
+
+  /// Fahrzeugfotos (Unterauswahl aus dateien des Gutachtens)
+  dateien         Datei[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([gutachtenId])
+  @@index([kennzeichen])
+  @@map("fahrzeuge")
+}
+
+// =============================================================================
+// UNFALLDATEN
+// =============================================================================
+
+/// Unfalldaten — direkt einem Gutachten zugeordnet (1:1)
+model Unfall {
+  id              String    @id @default(cuid())
+  gutachtenId     String    @unique
+  gutachten       Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Unfallzeitpunkt (Datum + Uhrzeit)
+  unfallZeit      DateTime?
+
+  /// Unfallort — Adresse
+  strasse         String?
+  hausnummer      String?
+  plz             String?
+  stadt           String?
+  land            String?   @default("Deutschland")
+
+  /// GPS-Koordinaten für Kartendarstellung
+  breitengrad     Float?
+  laengengrad     Float?
+
+  /// Streckentyp (Autobahn, Bundesstraße, Landstraße, Innerorts)
+  strassentyp     String?
+
+  /// Unfallbeschreibung
+  unfallHergang   String?   @db.Text
+
+  /// Wetterbedingungen
+  wetterlage      Wetterlage?
+  temperatur      Float?    // Grad Celsius
+  sichtverhaeltnis Sichtverhaeltnis?
+  strassenzustand Strassenzustand?
+
+  /// Polizeidaten
+  polizeiAktenzeichen String?
+  polizeiDienststelle  String?
+  polizeiEinsatznummer String?
+  polizeiProtokollDatum DateTime?
+
+  /// Lichtbedingungen (Tag, Nacht, Dämmerung)
+  lichtverhaeltnis String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("unfaelle")
+}
+
+// =============================================================================
+// SCHADENSBERECHNUNG
+// =============================================================================
+
+/// Ein einzelner Schadensposten (Reparatur, Wertminderung, etc.)
+model Schadensposten {
+  id          String    @id @default(cuid())
+  gutachtenId String
+  gutachten   Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Position in der Liste (für Sortierung)
+  position    Int
+  /// Bezeichnung des Postens (z.B. "Reparaturkosten Kotflügel")
+  bezeichnung String
+  /// Detaillierte Beschreibung
+  beschreibung String?  @db.Text
+  /// Betrag in Euro (Cents als Integer für Genauigkeit)
+  betragCents  Int      // Cent-Beträge vermeiden Floating-Point-Fehler
+  /// Kategorie (z.B. Reparatur, Wertminderung, Nutzungsausfall, Gutachterkosten)
+  kategorie   String
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([gutachtenId])
+  @@map("schadensposten")
+}
+
+// =============================================================================
+// DATEIVERWALTUNG
+// =============================================================================
+
+/// Hochgeladene Datei (Foto, PDF, Dokument)
+model Datei {
+  id            String    @id @default(cuid())
+  gutachtenId   String
+  gutachten     Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Optionale Zuordnung zu einem Fahrzeug
+  fahrzeugId    String?
+  fahrzeug      Fahrzeug? @relation(fields: [fahrzeugId], references: [id])
+
+  /// Originaler Dateiname
+  originalname  String
+  /// Gespeicherter Dateiname (eindeutig, UUID-basiert)
+  filename      String    @unique
+  /// Relativer Pfad im Upload-Verzeichnis
+  pfad          String
+  /// MIME-Typ (z.B. image/jpeg, application/pdf)
+  mimetype      String
+  /// Dateigröße in Bytes
+  groesse       Int
+  /// Beschreibung/Titel der Datei
+  beschreibung  String?
+
+  createdAt     DateTime  @default(now())
+
+  @@index([gutachtenId])
+  @@index([fahrzeugId])
+  @@map("dateien")
+}
+
+// =============================================================================
+// WORKFLOW: NOTIZEN, AUFGABEN, TERMINE
+// =============================================================================
+
+/// Interne Notiz zu einem Gutachten (nicht im PDF sichtbar)
+model Notiz {
+  id          String    @id @default(cuid())
+  gutachtenId String
+  gutachten   Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Notiz-Inhalt
+  inhalt      String    @db.Text
+  /// Wer hat die Notiz geschrieben
+  autor       String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([gutachtenId])
+  @@map("notizen")
+}
+
+/// Aufgabe/To-Do zu einem Gutachten
+model Aufgabe {
+  id          String             @id @default(cuid())
+  gutachtenId String
+  gutachten   Gutachten          @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Beschreibung der Aufgabe
+  titel       String
+  /// Erledigt?
+  erledigt    Boolean            @default(false)
+  /// Fälligkeitsdatum
+  faelligAm   DateTime?
+  /// Priorität
+  prioritaet  AufgabePrioritaet  @default(NORMAL)
+  /// Zugewiesen an
+  zugewiesen  String?
+  /// Erledigt am
+  erledigtAm  DateTime?
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([gutachtenId])
+  @@index([erledigt])
+  @@map("aufgaben")
+}
+
+/// Kalender-Termin (z.B. Besichtigung vor Ort)
+model Termin {
+  id          String    @id @default(cuid())
+  gutachtenId String
+  gutachten   Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Titel des Termins
+  titel       String
+  /// Beschreibung
+  beschreibung String?
+  /// Terminbeginn
+  start       DateTime
+  /// Terminende
+  ende        DateTime
+  /// Ort des Termins
+  ort         String?
+  /// Erinnerung (Minuten vor dem Termin)
+  erinnerung  Int?      // z.B. 60 = 1 Stunde vorher
+  /// Farbe für Kalenderanzeige (Hex)
+  farbe       String?   @default("#1976d2")
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([gutachtenId])
+  @@index([start])
+  @@map("termine")
+}
+
+// =============================================================================
+// SYSTEM: AUDIT-LOG, FEATURE-FLAGS, TENANTS
+// =============================================================================
+
+/// Vollständige Änderungshistorie (Audit-Log)
+model AuditLog {
+  id          String      @id @default(cuid())
+  gutachtenId String
+  gutachten   Gutachten   @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+
+  /// Was wurde gemacht
+  aktion      AuditAktion
+  /// Wer hat es gemacht
+  bearbeiter  String?
+  /// Beschreibung der Änderung
+  beschreibung String
+  /// Alte Werte (JSON)
+  alterWert   Json?
+  /// Neue Werte (JSON)
+  neuerWert   Json?
+
+  createdAt   DateTime    @default(now())
+
+  @@index([gutachtenId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// Feature-Flags für Admin-Panel
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  /// Eindeutiger Name (z.B. "FEATURE_KALENDER")
+  name        String   @unique
+  /// Beschreibung für das Admin-Panel
+  beschreibung String?
+  /// Ist das Feature aktiv?
+  aktiv       Boolean  @default(true)
+  /// Für welchen Tenant gilt das? (null = global)
+  tenantId    String?
+
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+  @@index([tenantId])
+  @@map("feature_flags")
+}
+
+/// Mandanten (Tenants) für SaaS-Betrieb (vorbereitet, noch nicht aktiv)
+model Tenant {
+  id          String   @id @default(cuid())
+  /// Eindeutiger Bezeichner (wird als Schema-Name verwendet)
+  slug        String   @unique
+  /// Anzeigename des Büros
+  name        String
+  /// PostgreSQL-Schema-Name für diesen Mandanten
+  schemaName  String   @unique
+  /// Ist der Tenant aktiv?
+  aktiv       Boolean  @default(true)
+  /// E-Mail-Adresse des Büros
+  email       String?
+  /// Telefon des Büros
+  telefon     String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tenants")
+}

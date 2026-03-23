@@ -1,0 +1,22 @@
+{
+  "name": "@gutachten/config",
+  "version": "2026.03.1",
+  "private": true,
+  "description": "Gemeinsame ESLint- und TypeScript-Konfigurationen für den Gutachten-Manager",
+  "main": "index.js",
+  "exports": {
+    "./eslint-config": "./eslint-config/index.js",
+    "./eslint-config/next": "./eslint-config/next.js",
+    "./eslint-config/node": "./eslint-config/node.js",
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
+    "./tsconfig/node.json": "./tsconfig/node.json"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.1.6",
+    "eslint-plugin-import": "^2.31.0"
+  }
+}
