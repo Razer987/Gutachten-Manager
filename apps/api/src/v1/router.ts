@@ -11,6 +11,8 @@
 
 import { Router } from 'express';
 
+import { env } from '@/config/env';
+
 // Feature-Module werden nach und nach importiert
 // (werden in späteren Patches hinzugefügt)
 // import { gutachtenRouter } from '@/modules/gutachten/gutachten.routes';
@@ -30,9 +32,9 @@ router.get('/health', (_req, res) => {
     success: true,
     data: {
       status: 'ok',
-      version: process.env['npm_package_version'] ?? '2026.03.1',
+      version: '2026.03.1',
       timestamp: new Date().toISOString(),
-      environment: process.env['NODE_ENV'] ?? 'unknown',
+      environment: env.NODE_ENV,
     },
   });
 });
