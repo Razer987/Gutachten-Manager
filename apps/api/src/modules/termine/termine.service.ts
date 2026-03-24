@@ -48,7 +48,7 @@ export const termineService = {
         ort: dto.ort,
         erinnerung: dto.erinnerung,
         farbe: dto.farbe,
-        gutachtenId: dto.gutachtenId,
+        gutachtenId: dto.gutachtenId ?? null,
       },
       include: {
         gutachten: { select: { id: true, aktenzeichen: true, titel: true } },

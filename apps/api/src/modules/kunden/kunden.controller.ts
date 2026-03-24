@@ -10,7 +10,7 @@ export const kundenController = {
   async list(req: Request, res: Response) {
     const query = KundenListQuerySchema.parse(req.query);
     const result = await kundenService.list(query);
-    res.json({ success: true, ...result });
+    res.json({ success: true, data: result });
   },
 
   async findById(req: Request, res: Response) {

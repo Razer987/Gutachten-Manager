@@ -16,7 +16,7 @@ export const gutachtenController = {
   async list(req: Request, res: Response) {
     const query = GutachtenListQuerySchema.parse(req.query);
     const result = await gutachtenService.list(query);
-    res.json({ success: true, ...result });
+    res.json({ success: true, data: result });
   },
 
   async findById(req: Request, res: Response) {

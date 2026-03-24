@@ -10,7 +10,7 @@ export const gutachterController = {
   async list(req: Request, res: Response) {
     const query = GutachterListQuerySchema.parse(req.query);
     const result = await gutachterService.list(query);
-    res.json({ success: true, ...result });
+    res.json({ success: true, data: result });
   },
 
   async findById(req: Request, res: Response) {

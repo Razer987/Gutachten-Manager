@@ -46,7 +46,7 @@ export default function NewKundePage(): React.JSX.Element {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nachname.trim()) {
+    if (!form.nachname?.trim()) {
       setError('Bitte geben Sie einen Nachnamen ein.');
       return;
     }

@@ -11,7 +11,7 @@ export const CreateTerminSchema = z.object({
   ort: z.string().max(500).optional().nullable(),
   erinnerung: z.coerce.number().int().min(0).optional().nullable(),
   farbe: z.string().max(20).optional().nullable(),
-  gutachtenId: z.string().cuid(),
+  gutachtenId: z.string().cuid().optional().nullable(),
 });
 
 export const UpdateTerminSchema = z.object({

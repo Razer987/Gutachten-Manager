@@ -495,8 +495,8 @@ model Aufgabe {
 /// Kalender-Termin (z.B. Besichtigung vor Ort)
 model Termin {
   id          String    @id @default(cuid())
-  gutachtenId String
-  gutachten   Gutachten @relation(fields: [gutachtenId], references: [id], onDelete: Cascade)
+  gutachtenId String?
+  gutachten   Gutachten? @relation(fields: [gutachtenId], references: [id], onDelete: SetNull)
 
   /// Titel des Termins
   titel       String
