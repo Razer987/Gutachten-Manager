@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gutachten-Manager — Handbuch</title>
+<style>
+  :root {
+    --blue: #1e40af;
+    --blue-light: #3b82f6;
+    --blue-bg: #eff6ff;
+    --green: #166534;
+    --green-bg: #f0fdf4;
+    --red: #991b1b;
+    --red-bg: #fef2f2;
+    --yellow: #92400e;
+    --yellow-bg: #fffbeb;
+    --gray: #374151;
+    --gray-light: #f9fafb;
+    --border: #e5e7eb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1f2937;
+    line-height: 1.6;
+    background: #f3f4f6;
+  }
+  .header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%);
+    color: white;
+    padding: 48px 32px;
+    text-align: center;
+  }
+  .header h1 { font-size: 2.4rem; font-weight: 700; margin-bottom: 8px; }
+  .header .sub { font-size: 1.1rem; opacity: 0.85; }
+  .header .version {
+    display: inline-block; margin-top: 16px;
+    background: rgba(255,255,255,0.2); padding: 4px 16px;
+    border-radius: 20px; font-size: 0.85rem;
+  }
+  .nav {
+    background: white; border-bottom: 2px solid var(--border);
+    padding: 0 32px; display: flex; gap: 4px; overflow-x: auto;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav a {
+    padding: 14px 16px; color: var(--gray); text-decoration: none;
+    font-size: 0.9rem; font-weight: 500; white-space: nowrap;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+  }
+  .nav a:hover { color: var(--blue); border-bottom-color: var(--blue-light); }
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+  .section { background: white; border-radius: 12px; padding: 36px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  h2 { font-size: 1.6rem; color: var(--blue); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--blue-bg); display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 1.15rem; color: #1f2937; margin: 24px 0 12px; }
+  p { margin-bottom: 12px; color: var(--gray); }
+  ul, ol { margin: 8px 0 16px 24px; }
+  li { margin-bottom: 6px; color: var(--gray); }
+  .step-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0; }
+  .step-card {
+    background: var(--blue-bg); border: 1px solid #bfdbfe;
+    border-radius: 10px; padding: 20px; text-align: center;
+  }
+  .step-card .num {
+    width: 40px; height: 40px; background: var(--blue); color: white;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; font-weight: 700; margin: 0 auto 12px;
+  }
+  .step-card strong { display: block; margin-bottom: 6px; color: var(--blue); }
+  .step-card p { font-size: 0.85rem; margin: 0; }
+  .callout {
+    border-radius: 8px; padding: 16px 20px; margin: 16px 0;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .callout.info { background: var(--blue-bg); border-left: 4px solid var(--blue-light); }
+  .callout.success { background: var(--green-bg); border-left: 4px solid #22c55e; }
+  .callout.warning { background: var(--yellow-bg); border-left: 4px solid #f59e0b; }
+  .callout.error { background: var(--red-bg); border-left: 4px solid #ef4444; }
+  .callout .icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+  .callout .text strong { display: block; margin-bottom: 4px; }
+  .callout .text p { margin: 0; font-size: 0.9rem; }
+  .code-block {
+    background: #1e293b; color: #e2e8f0; border-radius: 8px;
+    padding: 16px 20px; font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9rem; overflow-x: auto; margin: 12px 0;
+    position: relative;
+  }
+  .code-block .comment { color: #94a3b8; }
+  .file-block {
+    background: var(--gray-light); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; margin: 12px 0;
+  }
+  .file-block .filename {
+    font-family: monospace; font-weight: 700; color: var(--blue);
+    margin-bottom: 8px; font-size: 1rem;
+  }
+  .file-block p { margin: 0; font-size: 0.9rem; }
+  .bat-files { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+  .bat-card {
+    border: 2px solid var(--border); border-radius: 10px; padding: 20px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .bat-card:hover { border-color: var(--blue-light); box-shadow: 0 4px 12px rgba(59,130,246,0.15); }
+  .bat-card .bat-icon { font-size: 2rem; margin-bottom: 10px; }
+  .bat-card strong { display: block; font-size: 1rem; margin-bottom: 6px; color: #111; }
+  .bat-card p { font-size: 0.85rem; margin: 0; }
+  .bat-card.green { border-color: #86efac; background: var(--green-bg); }
+  .bat-card.red { border-color: #fca5a5; background: var(--red-bg); }
+  .bat-card.blue { border-color: #93c5fd; background: var(--blue-bg); }
+  .faq-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  .faq-q { background: var(--gray-light); padding: 14px 20px; font-weight: 600; cursor: pointer; }
+  .faq-a { padding: 14px 20px; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--gray); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th { background: var(--blue-bg); color: var(--blue); padding: 10px 16px; text-align: left; font-size: 0.85rem; }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .badge.green { background: #dcfce7; color: #166534; }
+  .badge.blue { background: #dbeafe; color: #1e40af; }
+  .footer {
+    text-align: center; padding: 32px; color: #6b7280; font-size: 0.85rem;
+    border-top: 1px solid var(--border); margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 Gutachten-Manager</h1>
+  <div class="sub">Handbuch — Installation &amp; Nutzung</div>
+  <div class="version">Version 2026.03.1</div>
+</div>
+
+<nav class="nav">
+  <a href="#voraussetzungen">Voraussetzungen</a>
+  <a href="#installation">Installation</a>
+  <a href="#starten">Starten &amp; Stoppen</a>
+  <a href="#nutzung">Nutzung</a>
+  <a href="#daten">Daten &amp; Backup</a>
+  <a href="#fehler">Fehlerbehebung</a>
+  <a href="#faq">FAQ</a>
+</nav>
+
+<div class="container">
+
+  <!-- ═══ ÜBERBLICK ═══ -->
+  <div class="section">
+    <h2>🗂 Was ist der Gutachten-Manager?</h2>
+    <p>
+      Der <strong>Gutachten-Manager</strong> ist eine professionelle Webanwendung zur Verwaltung von
+      unfallanalytischen und unfalltechnischen Gutachten. Er läuft vollständig lokal auf Ihrem
+      Windows-PC — keine Cloud, keine Drittanbieter, Ihre Daten bleiben bei Ihnen.
+    </p>
+    <div class="step-grid">
+      <div class="step-card">
+        <div class="num">🌐</div>
+        <strong>Webanwendung</strong>
+        <p>Läuft im Browser — kein separates Programm nötig</p>
+      </div>
+      <div class="step-card">
+        <div class="num">🔒</div>
+        <strong>100% Lokal</strong>
+        <p>Alle Daten bleiben auf Ihrem PC</p>
+      </div>
+      <div class="step-card">
+        <div class="num">🐳</div>
+        <strong>Docker-basiert</strong>
+        <p>Einfache Installation ohne technisches Know-how</p>
+      </div>
+      <div class="step-card">
+        <div class="num">💾</div>
+        <strong>Persistente Daten</strong>
+        <p>Daten bleiben erhalten, auch nach Neustart</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VORAUSSETZUNGEN ═══ -->
+  <div class="section" id="voraussetzungen">
+    <h2>⚙️ Voraussetzungen</h2>
+
+    <h3>Systemanforderungen</h3>
+    <table>
+      <tr><th>Anforderung</th><th>Minimum</th><th>Empfohlen</th></tr>
+      <tr><td>Betriebssystem</td><td colspan="2">Windows 10 / 11 (64-Bit)</td></tr>
+      <tr><td>RAM</td><td>4 GB</td><td>8 GB oder mehr</td></tr>
+      <tr><td>Festplatte</td><td>5 GB frei</td><td>20 GB frei</td></tr>
+      <tr><td>Internet</td><td colspan="2">Nur beim ersten Start nötig (Download der Basis-Images)</td></tr>
+    </table>
+
+    <h3>Benötigte Software: Docker Desktop</h3>
+    <div class="callout info">
+      <div class="icon">ℹ️</div>
+      <div class="text">
+        <strong>Nur Docker Desktop wird benötigt</strong>
+        <p>Der Gutachten-Manager bringt alles andere (Datenbank, Server, etc.) mit.
+        Sie müssen nur Docker Desktop installieren.</p>
+      </div>
+    </div>
+
+    <h3>Docker Desktop installieren</h3>
+    <ol>
+      <li>Öffnen Sie <code>https://www.docker.com/products/docker-desktop</code> im Browser</li>
+      <li>Klicken Sie auf <strong>"Download for Windows"</strong></li>
+      <li>Führen Sie die heruntergeladene <code>.exe</code> Datei aus</li>
+      <li>Folgen Sie dem Installationsassistenten (alle Standardeinstellungen übernehmen)</li>
+      <li>Nach der Installation: Windows neu starten</li>
+      <li>Docker Desktop starten — warten bis das <strong>Wal-Symbol</strong> in der Taskleiste erscheint</li>
+    </ol>
+
+    <div class="callout success">
+      <div class="icon">✅</div>
+      <div class="text">
+        <strong>Docker ist bereit, wenn...</strong>
+        <p>...das Wal-Symbol (🐳) in der Taskleiste unten rechts erscheint und
+        "Docker Desktop is running" anzeigt.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INSTALLATION ═══ -->
+  <div class="section" id="installation">
+    <h2>📥 Installation</h2>
+
+    <h3>Schritt 1 — Projektordner herunterladen</h3>
+    <p>
+      Öffnen Sie die GitHub-Seite des Projekts und laden Sie den Projektordner als ZIP herunter:
+    </p>
+    <ol>
+      <li>GitHub-Seite öffnen: <code>https://github.com/Razer987/Gutachten-Manager</code></li>
+      <li>Klicken Sie auf den grünen Button <strong>"Code"</strong></li>
+      <li>Wählen Sie <strong>"Download ZIP"</strong></li>
+      <li>ZIP-Datei speichern (z.B. auf dem Desktop)</li>
+      <li>Rechtsklick auf die ZIP → <strong>"Alle extrahieren..."</strong></li>
+      <li>Zielordner wählen (z.B. <code>C:\Gutachten-Manager\</code>)</li>
+    </ol>
+
+    <div class="callout warning">
+      <div class="icon">⚠️</div>
+      <div class="text">
+        <strong>Ordnerpfad ohne Sonderzeichen</strong>
+        <p>Verwenden Sie einen einfachen Pfad ohne Leerzeichen oder Umlaute.
+        Gut: <code>C:\Gutachten-Manager</code> — Schlecht: <code>C:\Meine Dokumente\Ärzte Gutachten</code></p>
+      </div>
+    </div>
+
+    <h3>Schritt 2 — Konfiguration einrichten</h3>
+    <p>Im Projektordner befindet sich eine <code>.env.example</code> Datei.
+    Erstellen Sie eine Kopie davon und benennen Sie sie <code>.env</code>:</p>
+    <div class="code-block">
+      <span class="comment"># Im Explorer: .env.example kopieren und umbenennen in .env</span><br>
+      <span class="comment"># ODER: STARTEN.bat macht das automatisch beim ersten Start</span>
+    </div>
+
+    <div class="callout info">
+      <div class="icon">💡</div>
+      <div class="text">
+        <strong>Automatische Konfiguration</strong>
+        <p>Wenn Sie einfach <code>STARTEN.bat</code> doppelklicken, wird die Konfiguration
+        automatisch erstellt. Sie müssen nichts manuell tun.</p>
+      </div>
+    </div>
+
+    <h3>Schritt 3 — Fertig!</h3>
+    <p>Das war es. Starten Sie jetzt die Anwendung wie unten beschrieben.</p>
+  </div>
+
+  <!-- ═══ STARTEN & STOPPEN ═══ -->
+  <div class="section" id="starten">
+    <h2>▶️ Starten &amp; Stoppen</h2>
+
+    <p>Im Projektordner befinden sich drei ausführbare <code>.bat</code> Dateien:</p>
+
+    <div class="bat-files">
+      <div class="bat-card green">
+        <div class="bat-icon">▶️</div>
+        <strong>STARTEN.bat</strong>
+        <p>Startet den Gutachten-Manager. Beim ersten Mal dauert es 5–15 Minuten (Download &amp; Build).</p>
+      </div>
+      <div class="bat-card red">
+        <div class="bat-icon">⏹️</div>
+        <strong>BEENDEN.bat</strong>
+        <p>Stoppt alle laufenden Container. Ihre Daten bleiben erhalten.</p>
+      </div>
+      <div class="bat-card blue">
+        <div class="bat-icon">📊</div>
+        <strong>STATUS.bat</strong>
+        <p>Zeigt den aktuellen Status und die letzten Log-Einträge an.</p>
+      </div>
+    </div>
+
+    <h3>Erster Start (5–15 Minuten)</h3>
+    <ol>
+      <li>Stellen Sie sicher, dass <strong>Docker Desktop läuft</strong> (Wal-Symbol in Taskleiste)</li>
+      <li>Öffnen Sie den Projektordner im Explorer</li>
+      <li>Doppelklicken Sie auf <strong>STARTEN.bat</strong></li>
+      <li>Falls Windows fragt "Möchten Sie diese App ausführen?" → <strong>Ja</strong> klicken</li>
+      <li>Warten Sie, bis das Fenster meldet "Die Anwendung ist bereit!"</li>
+      <li>Der Browser öffnet sich automatisch</li>
+    </ol>
+
+    <div class="callout info">
+      <div class="icon">⏱️</div>
+      <div class="text">
+        <strong>Erster Start vs. Folgestarts</strong>
+        <p>Der <em>erste Start</em> dauert 5–15 Minuten (Basis-Images werden heruntergeladen,
+        der Quellcode wird kompiliert). <em>Alle weiteren Starts</em> dauern nur 30–60 Sekunden.</p>
+      </div>
+    </div>
+
+    <h3>Normaler Start</h3>
+    <ol>
+      <li>Docker Desktop starten und warten</li>
+      <li><strong>STARTEN.bat</strong> doppelklicken</li>
+      <li>Browser öffnet sich automatisch auf <code>http://localhost</code></li>
+    </ol>
+
+    <h3>Stoppen</h3>
+    <ol>
+      <li><strong>BEENDEN.bat</strong> doppelklicken</li>
+      <li>Warten bis das Fenster "erfolgreich gestoppt" meldet</li>
+      <li>Docker Desktop kann danach ebenfalls beendet werden</li>
+    </ol>
+
+    <div class="callout success">
+      <div class="icon">🔒</div>
+      <div class="text">
+        <strong>Daten sind sicher</strong>
+        <p>Wenn Sie die Anwendung stoppen, gehen <strong>keine Daten verloren</strong>.
+        Alle eingetragenen Gutachten, Bilder und Dokumente bleiben erhalten.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ NUTZUNG ═══ -->
+  <div class="section" id="nutzung">
+    <h2>📋 Nutzung der Anwendung</h2>
+
+    <h3>Zugriff</h3>
+    <p>Die Anwendung ist nach dem Start im Browser unter folgender Adresse erreichbar:</p>
+    <div class="code-block">http://localhost</div>
+
+    <table>
+      <tr><th>Bereich</th><th>Adresse</th><th>Beschreibung</th></tr>
+      <tr>
+        <td>Hauptanwendung</td>
+        <td><code>http://localhost</code></td>
+        <td>Frontend — hier arbeiten Sie</td>
+      </tr>
+      <tr>
+        <td>API Health-Check</td>
+        <td><code>http://localhost/api/v1/health</code></td>
+        <td>Zeigt ob der Server läuft</td>
+      </tr>
+    </table>
+
+    <h3>Features im Überblick</h3>
+    <table>
+      <tr><th>Feature</th><th>Status</th><th>Beschreibung</th></tr>
+      <tr><td>Gutachtenverwaltung</td><td><span class="badge green">Aktiv</span></td><td>Erstellen, bearbeiten, archivieren</td></tr>
+      <tr><td>Kalender</td><td><span class="badge green">Aktiv</span></td><td>Terminplanung für Gutachten</td></tr>
+      <tr><td>Foto-Editor</td><td><span class="badge green">Aktiv</span></td><td>Fotos direkt in der App bearbeiten</td></tr>
+      <tr><td>Skizzen</td><td><span class="badge green">Aktiv</span></td><td>Unfallskizzen zeichnen</td></tr>
+      <tr><td>PDF-Export</td><td><span class="badge green">Aktiv</span></td><td>Gutachten als PDF exportieren</td></tr>
+      <tr><td>Volltextsuche</td><td><span class="badge green">Aktiv</span></td><td>Alle Gutachten durchsuchen</td></tr>
+      <tr><td>Multi-Tenancy</td><td><span class="badge blue">Optional</span></td><td>Mehrere Nutzer/Kanzleien</td></tr>
+    </table>
+
+    <h3>Dateien hochladen</h3>
+    <p>Sie können Fotos, Dokumente und andere Dateien direkt in der Anwendung hochladen.
+    Die maximale Dateigröße beträgt standardmäßig <strong>50 MB</strong> pro Datei.</p>
+  </div>
+
+  <!-- ═══ DATEN & BACKUP ═══ -->
+  <div class="section" id="daten">
+    <h2>💾 Daten &amp; Backup</h2>
+
+    <h3>Wo werden meine Daten gespeichert?</h3>
+    <p>
+      Alle Daten werden in sogenannten <strong>Docker Volumes</strong> gespeichert.
+      Das sind besondere Ordner, die Docker verwaltet und die auch dann erhalten bleiben,
+      wenn Sie die Anwendung stoppen.
+    </p>
+
+    <table>
+      <tr><th>Datentyp</th><th>Volume-Name</th></tr>
+      <tr><td>Datenbank (alle Gutachten)</td><td><code>gutachten_postgres_data</code></td></tr>
+      <tr><td>Hochgeladene Dateien</td><td><code>gutachten_uploads</code></td></tr>
+      <tr><td>Automatische Backups</td><td><code>gutachten_backups</code></td></tr>
+      <tr><td>Log-Dateien</td><td><code>gutachten_logs</code></td></tr>
+    </table>
+
+    <h3>Automatisches Backup</h3>
+    <div class="callout success">
+      <div class="icon">🔄</div>
+      <div class="text">
+        <strong>Tägliches Backup um 02:00 Uhr</strong>
+        <p>Der Gutachten-Manager erstellt automatisch jede Nacht um 02:00 Uhr ein Backup
+        der Datenbank. Backups werden 30 Tage lang aufbewahrt und dann automatisch gelöscht.</p>
+      </div>
+    </div>
+
+    <h3>Manuelles Backup erstellen</h3>
+    <p>Öffnen Sie ein Eingabeaufforderungsfenster (<code>cmd</code>) im Projektordner und führen Sie aus:</p>
+    <div class="code-block">docker exec gutachten_api node -e "require('./dist/jobs/backup.job').runBackupNow()"</div>
+
+    <h3>Daten beim Deinstallieren behalten</h3>
+    <div class="callout warning">
+      <div class="icon">⚠️</div>
+      <div class="text">
+        <strong>Wichtig bei Deinstallation</strong>
+        <p>Wenn Sie Docker Desktop deinstallieren oder die Volumes manuell löschen,
+        gehen alle Daten verloren. Erstellen Sie vorher immer ein manuelles Backup!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FEHLERBEHEBUNG ═══ -->
+  <div class="section" id="fehler">
+    <h2>🔧 Fehlerbehebung</h2>
+
+    <h3>Problem: "Docker ist nicht gestartet"</h3>
+    <div class="file-block">
+      <div class="filename">Fehlermeldung: Cannot connect to the Docker daemon</div>
+      <p><strong>Lösung:</strong> Starten Sie Docker Desktop. Warten Sie, bis das Wal-Symbol
+      in der Taskleiste erscheint. Dann STARTEN.bat erneut ausführen.</p>
+    </div>
+
+    <h3>Problem: Browser öffnet sich, aber Seite lädt nicht</h3>
+    <div class="file-block">
+      <div class="filename">Seite zeigt "Diese Website ist nicht erreichbar"</div>
+      <p><strong>Ursache:</strong> Die Container brauchen noch etwas Zeit zum Starten.<br>
+      <strong>Lösung:</strong> 30–60 Sekunden warten, dann Browser-Seite neu laden (F5).</p>
+    </div>
+
+    <h3>Problem: Port 80 ist bereits belegt</h3>
+    <div class="file-block">
+      <div class="filename">Fehlermeldung: bind: address already in use</div>
+      <p>
+        <strong>Ursache:</strong> Ein anderes Programm (z.B. IIS, ein anderer Webserver)
+        verwendet Port 80.<br>
+        <strong>Lösung 1:</strong> Das andere Programm beenden.<br>
+        <strong>Lösung 2:</strong> In der Datei <code>infrastructure/docker-compose.yml</code>
+        die Zeile <code>"80:80"</code> zu <code>"8080:80"</code> ändern.
+        Dann läuft die App unter <code>http://localhost:8080</code>.
+      </p>
+    </div>
+
+    <h3>Problem: Erster Start schlägt fehl</h3>
+    <div class="file-block">
+      <div class="filename">Build-Fehler beim ersten Start</div>
+      <p>
+        <strong>Lösung:</strong><br>
+        1. STATUS.bat ausführen und Fehler lesen<br>
+        2. BEENDEN.bat ausführen<br>
+        3. STARTEN.bat erneut ausführen<br>
+        4. Sicherstellen, dass eine Internetverbindung besteht (für ersten Start nötig)
+      </p>
+    </div>
+
+    <h3>Logs anzeigen</h3>
+    <p>Für detaillierte Fehlerdiagnose: <strong>STATUS.bat</strong> doppelklicken.
+    Es zeigt die letzten 20 Log-Einträge aller Container.</p>
+
+    <h3>Kompletter Neustart (Letzter Ausweg)</h3>
+    <div class="callout error">
+      <div class="icon">⚠️</div>
+      <div class="text">
+        <strong>Achtung: Löscht alle Daten!</strong>
+        <p>Nur als absoluten letzten Ausweg nutzen. Erstellen Sie vorher ein Backup!</p>
+      </div>
+    </div>
+    <div class="code-block">
+      <span class="comment"># Eingabeaufforderung im Projektordner öffnen:</span><br>
+      docker compose -f infrastructure/docker-compose.yml down -v<br>
+      <span class="comment"># Dann STARTEN.bat erneut ausführen</span>
+    </div>
+  </div>
+
+  <!-- ═══ FAQ ═══ -->
+  <div class="section" id="faq">
+    <h2>❓ Häufige Fragen (FAQ)</h2>
+
+    <div class="faq-item">
+      <div class="faq-q">Muss Docker Desktop immer laufen, wenn ich die App nutze?</div>
+      <div class="faq-a">Ja. Docker Desktop muss gestartet sein, bevor Sie STARTEN.bat ausführen.
+      Sie können Docker Desktop so konfigurieren, dass es automatisch mit Windows startet
+      (Einstellungen → General → "Start Docker Desktop when you log in").</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Kann ich die App von einem anderen PC im Netzwerk aufrufen?</div>
+      <div class="faq-a">Ja, aber nur im lokalen Netzwerk. Andere PCs können die Anwendung unter
+      <code>http://[IP-Adresse-Ihres-PCs]</code> aufrufen. Die IP-Adresse finden Sie über
+      Eingabeaufforderung → <code>ipconfig</code>.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Was passiert mit meinen Daten wenn ich den PC neu starte?</div>
+      <div class="faq-a">Alle Daten bleiben erhalten. Nach dem Neustart müssen Sie lediglich
+      Docker Desktop starten und dann STARTEN.bat ausführen.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Wie aktualisiere ich auf eine neue Version?</div>
+      <div class="faq-a">
+        1. BEENDEN.bat ausführen<br>
+        2. Neue Version herunterladen und in denselben Ordner entpacken<br>
+        3. STARTEN.bat ausführen — das System baut automatisch neu<br>
+        Ihre Daten bleiben dabei erhalten.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Wie ändere ich das Datenbankpasswort?</div>
+      <div class="faq-a">
+        1. BEENDEN.bat ausführen<br>
+        2. Datei <code>.env</code> mit Editor öffnen<br>
+        3. <code>DATABASE_PASSWORD</code> ändern<br>
+        4. STARTEN.bat ausführen<br>
+        <strong>Achtung:</strong> Bei bestehender Datenbank muss das Passwort auch
+        in der Datenbank geändert werden. Bei Neuinstallation reicht die .env-Änderung.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Warum öffnet sich kein Browser automatisch?</div>
+      <div class="faq-a">Falls der Browser nicht automatisch öffnet, geben Sie manuell
+      <code>http://localhost</code> in die Adressleiste Ihres Browsers ein.</div>
+    </div>
+  </div>
+
+  <!-- ═══ DATEISTRUKTUR ═══ -->
+  <div class="section">
+    <h2>📁 Inhalt des Projektordners</h2>
+    <table>
+      <tr><th>Datei / Ordner</th><th>Zweck</th></tr>
+      <tr><td><code>STARTEN.bat</code></td><td>Anwendung starten (doppelklicken)</td></tr>
+      <tr><td><code>BEENDEN.bat</code></td><td>Anwendung stoppen</td></tr>
+      <tr><td><code>STATUS.bat</code></td><td>Status und Logs anzeigen</td></tr>
+      <tr><td><code>HANDBUCH.html</code></td><td>Dieses Handbuch</td></tr>
+      <tr><td><code>.env</code></td><td>Konfiguration (Passwörter, Einstellungen)</td></tr>
+      <tr><td><code>.env.example</code></td><td>Vorlage für die Konfiguration</td></tr>
+      <tr><td><code>apps/</code></td><td>Quellcode Frontend + Backend</td></tr>
+      <tr><td><code>infrastructure/</code></td><td>Docker-Konfiguration</td></tr>
+      <tr><td><code>packages/</code></td><td>Geteilte Bibliotheken</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>Gutachten-Manager v2026.03.1 — Lokales Handbuch</p>
+  <p style="margin-top:4px">Bei Problemen: <code>STATUS.bat</code> ausführen und Logs prüfen</p>
+</div>
+
+</body>
+</html>
