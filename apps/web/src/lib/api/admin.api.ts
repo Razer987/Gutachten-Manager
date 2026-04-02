@@ -10,7 +10,7 @@ export interface FeatureFlag {
   name: string;
   beschreibung: string | null;
   aktiv: boolean;
-  createdAt: string;
+  // kein createdAt — FeatureFlag hat nur updatedAt im Schema
   updatedAt: string;
 }
 
@@ -18,8 +18,9 @@ export const adminApi = {
   listFlags: (): Promise<FeatureFlag[]> =>
     apiClient.get<FeatureFlag[]>('/admin/feature-flags'),
 
-  toggleFlag: (id: string, aktiv: boolean): Promise<FeatureFlag> =>
-    apiClient.patch<FeatureFlag>(`/admin/feature-flags/${id}`, { aktiv }),
+  // Route ist /admin/feature-flags/:name (name, nicht id!)
+  toggleFlag: (name: string, aktiv: boolean): Promise<FeatureFlag> =>
+    apiClient.patch<FeatureFlag>(`/admin/feature-flags/${encodeURIComponent(name)}`, { aktiv }),
 
   createFlag: (data: { name: string; beschreibung?: string; aktiv?: boolean }): Promise<FeatureFlag> =>
     apiClient.post<FeatureFlag>('/admin/feature-flags', data),

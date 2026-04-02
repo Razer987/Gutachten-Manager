@@ -68,6 +68,7 @@ import {
   type Fahrzeug,
   type Notiz,
   type Person,
+  type PersonTyp,
   type Schadensposten,
   type Unfalldaten,
   type AuditEintrag,
@@ -106,11 +107,13 @@ const STATUS_UEBERGAENGE: Record<GutachtenStatus, GutachtenStatus[]> = {
   ARCHIV: [],
 };
 
+// PersonTyp-Enum gemäß Prisma-Schema (PersonTyp)
 const PERSON_TYP_LABELS: Record<string, string> = {
   FAHRER: 'Fahrer',
+  BEIFAHRER: 'Beifahrer',
+  FUSSGAENGER: 'Fußgänger',
   ZEUGE: 'Zeuge',
-  GESCHAEDIGTER: 'Geschädigter',
-  SONSTIGER: 'Sonstiger',
+  VERLETZTE: 'Verletzte',
 };
 
 // ─── Tab-Panel ────────────────────────────────────────────────────────────────
@@ -135,7 +138,7 @@ function FahrzeugeTab({ gutachtenId }: { gutachtenId: string }) {
   const [items, setItems] = useState<Fahrzeug[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CreateFahrzeugInput>({});
+  const [form, setForm] = useState<CreateFahrzeugInput>({ kennzeichen: '', marke: '', modell: '' });
 
   const load = useCallback(() => {
     subresourcesApi.fahrzeuge.list(gutachtenId).then(setItems).finally(() => setLoading(false));
@@ -144,9 +147,10 @@ function FahrzeugeTab({ gutachtenId }: { gutachtenId: string }) {
   useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
+    if (!form.kennzeichen || !form.marke || !form.modell) return;
     await subresourcesApi.fahrzeuge.create(gutachtenId, form);
     setOpen(false);
-    setForm({});
+    setForm({ kennzeichen: '', marke: '', modell: '' });
     load();
   };
 
@@ -182,11 +186,11 @@ function FahrzeugeTab({ gutachtenId }: { gutachtenId: string }) {
           <TableBody>
             {items.map((f) => (
               <TableRow key={f.id}>
-                <TableCell>{f.kennzeichen ?? '—'}</TableCell>
+                <TableCell>{f.kennzeichen}</TableCell>
                 <TableCell>{[f.marke, f.modell].filter(Boolean).join(' ') || '—'}</TableCell>
                 <TableCell>{f.baujahr ?? '—'}</TableCell>
                 <TableCell>{f.farbe ?? '—'}</TableCell>
-                <TableCell>{f.fahrgestellnummer ?? '—'}</TableCell>
+                <TableCell>{f.fahrgestell ?? '—'}</TableCell>
                 <TableCell>
                   <IconButton size="small" onClick={() => handleDelete(f.id)}>
                     <DeleteIcon fontSize="small" />
@@ -202,11 +206,11 @@ function FahrzeugeTab({ gutachtenId }: { gutachtenId: string }) {
         <DialogTitle>Fahrzeug hinzufügen</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField label="Kennzeichen" value={form.kennzeichen ?? ''} onChange={(e) => setForm((p) => ({ ...p, kennzeichen: e.target.value }))} />
-          <TextField label="Marke" value={form.marke ?? ''} onChange={(e) => setForm((p) => ({ ...p, marke: e.target.value }))} />
-          <TextField label="Modell" value={form.modell ?? ''} onChange={(e) => setForm((p) => ({ ...p, modell: e.target.value }))} />
+          <TextField required label="Marke" value={form.marke} onChange={(e) => setForm((p) => ({ ...p, marke: e.target.value }))} />
+          <TextField required label="Modell" value={form.modell} onChange={(e) => setForm((p) => ({ ...p, modell: e.target.value }))} />
           <TextField label="Baujahr" type="number" value={form.baujahr ?? ''} onChange={(e) => setForm((p) => ({ ...p, baujahr: Number(e.target.value) || undefined }))} />
           <TextField label="Farbe" value={form.farbe ?? ''} onChange={(e) => setForm((p) => ({ ...p, farbe: e.target.value }))} />
-          <TextField label="Fahrgestellnummer (FIN)" value={form.fahrgestellnummer ?? ''} onChange={(e) => setForm((p) => ({ ...p, fahrgestellnummer: e.target.value }))} />
+          <TextField label="FIN (Fahrgestellnummer)" value={form.fahrgestell ?? ''} onChange={(e) => setForm((p) => ({ ...p, fahrgestell: e.target.value }))} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Abbrechen</Button>
@@ -223,7 +227,7 @@ function PersonenTab({ gutachtenId }: { gutachtenId: string }) {
   const [items, setItems] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CreatePersonInput>({ typ: 'FAHRER', nachname: '' });
+  const [form, setForm] = useState<CreatePersonInput>({ typ: 'FAHRER', vorname: '', nachname: '' });
 
   const load = useCallback(() => {
     subresourcesApi.personen.list(gutachtenId).then(setItems).finally(() => setLoading(false));
@@ -235,7 +239,7 @@ function PersonenTab({ gutachtenId }: { gutachtenId: string }) {
     if (!form.nachname) return;
     await subresourcesApi.personen.create(gutachtenId, form);
     setOpen(false);
-    setForm({ typ: 'FAHRER', nachname: '' });
+    setForm({ typ: 'FAHRER', vorname: '', nachname: '' });
     load();
   };
 
@@ -290,7 +294,7 @@ function PersonenTab({ gutachtenId }: { gutachtenId: string }) {
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Person hinzufügen</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <Select value={form.typ} onChange={(e) => setForm((p) => ({ ...p, typ: e.target.value as CreatePersonInput['typ'] }))}>
+          <Select value={form.typ} onChange={(e) => setForm((p) => ({ ...p, typ: e.target.value as PersonTyp }))}>
             {Object.entries(PERSON_TYP_LABELS).map(([k, v]) => (
               <MenuItem key={k} value={k}>{v}</MenuItem>
             ))}
@@ -312,26 +316,43 @@ function PersonenTab({ gutachtenId }: { gutachtenId: string }) {
 
 // ─── Schaden-Tab ──────────────────────────────────────────────────────────────
 
+const SCHADENS_KATEGORIEN = [
+  'Reparatur', 'Wertminderung', 'Nutzungsausfall', 'Gutachterkosten',
+  'Mietwagenkosten', 'Abschleppkosten', 'Sonstiges',
+];
+
 function SchadenTab({ gutachtenId }: { gutachtenId: string }) {
   const [posten, setPosten] = useState<Schadensposten[]>([]);
-  const [gesamt, setGesamt] = useState(0);
+  const [gesamtEuro, setGesamtEuro] = useState(0);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CreateSchadenspostenInput>({ beschreibung: '', betrag: 0 });
+  // betragCents: Eingabe in Euro, intern in Cents umrechnen
+  const [euroEingabe, setEuroEingabe] = useState('');
+  const [form, setForm] = useState<Omit<CreateSchadenspostenInput, 'betragCents'>>({
+    position: 1,
+    bezeichnung: '',
+    kategorie: 'Reparatur',
+  });
 
   const load = useCallback(() => {
     subresourcesApi.schaden.list(gutachtenId)
-      .then((res) => { setPosten(res.posten); setGesamt(res.gesamtbetrag); })
+      .then((res) => {
+        setPosten(res.posten);
+        setGesamtEuro(res.summen.gesamtEuro); // korrekt: summen.gesamtEuro
+      })
       .finally(() => setLoading(false));
   }, [gutachtenId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
-    if (!form.beschreibung || form.betrag <= 0) return;
-    await subresourcesApi.schaden.create(gutachtenId, form);
+    if (!form.bezeichnung || !euroEingabe) return;
+    const betragCents = Math.round(parseFloat(euroEingabe.replace(',', '.')) * 100);
+    if (isNaN(betragCents) || betragCents <= 0) return;
+    await subresourcesApi.schaden.create(gutachtenId, { ...form, betragCents });
     setOpen(false);
-    setForm({ beschreibung: '', betrag: 0 });
+    setForm({ position: posten.length + 2, bezeichnung: '', kategorie: 'Reparatur' });
+    setEuroEingabe('');
     load();
   };
 
@@ -340,15 +361,18 @@ function SchadenTab({ gutachtenId }: { gutachtenId: string }) {
     load();
   };
 
-  const fmt = (n: number) => n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  const fmt = (euro: number) => euro.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
   if (loading) return <CircularProgress size={24} />;
 
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Gesamtschaden: <strong>{fmt(gesamt)}</strong></Typography>
-        <Button startIcon={<AddIcon />} variant="contained" onClick={() => setOpen(true)}>
+        <Typography variant="h6">Gesamtschaden: <strong>{fmt(gesamtEuro)}</strong></Typography>
+        <Button startIcon={<AddIcon />} variant="contained" onClick={() => {
+          setForm({ position: posten.length + 1, bezeichnung: '', kategorie: 'Reparatur' });
+          setOpen(true);
+        }}>
           Posten hinzufügen
         </Button>
       </Box>
@@ -360,8 +384,8 @@ function SchadenTab({ gutachtenId }: { gutachtenId: string }) {
           <TableHead>
             <TableRow>
               <TableCell>#</TableCell>
-              <TableCell>Beschreibung</TableCell>
-              <TableCell>Einheit</TableCell>
+              <TableCell>Bezeichnung</TableCell>
+              <TableCell>Kategorie</TableCell>
               <TableCell align="right">Betrag</TableCell>
               <TableCell />
             </TableRow>
@@ -370,9 +394,9 @@ function SchadenTab({ gutachtenId }: { gutachtenId: string }) {
             {posten.map((sp) => (
               <TableRow key={sp.id}>
                 <TableCell>{sp.position}</TableCell>
-                <TableCell>{sp.beschreibung}</TableCell>
-                <TableCell>{sp.einheit ?? '—'}</TableCell>
-                <TableCell align="right">{fmt(sp.betrag)}</TableCell>
+                <TableCell>{sp.bezeichnung}</TableCell>       {/* korrekt: bezeichnung */}
+                <TableCell>{sp.kategorie}</TableCell>        {/* korrekt: kategorie */}
+                <TableCell align="right">{fmt(sp.betragCents / 100)}</TableCell>  {/* Cents → Euro */}
                 <TableCell>
                   <IconButton size="small" onClick={() => handleDelete(sp.id)}>
                     <DeleteIcon fontSize="small" />
@@ -382,7 +406,7 @@ function SchadenTab({ gutachtenId }: { gutachtenId: string }) {
             ))}
             <TableRow>
               <TableCell colSpan={3} align="right"><strong>Gesamt</strong></TableCell>
-              <TableCell align="right"><strong>{fmt(gesamt)}</strong></TableCell>
+              <TableCell align="right"><strong>{fmt(gesamtEuro)}</strong></TableCell>
               <TableCell />
             </TableRow>
           </TableBody>
@@ -392,13 +416,21 @@ function SchadenTab({ gutachtenId }: { gutachtenId: string }) {
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Schadensposten hinzufügen</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField required label="Beschreibung" value={form.beschreibung} onChange={(e) => setForm((p) => ({ ...p, beschreibung: e.target.value }))} />
-          <TextField required label="Betrag (€)" type="number" value={form.betrag} onChange={(e) => setForm((p) => ({ ...p, betrag: Number(e.target.value) }))} />
-          <TextField label="Einheit" value={form.einheit ?? ''} onChange={(e) => setForm((p) => ({ ...p, einheit: e.target.value }))} />
+          <TextField required label="Bezeichnung" value={form.bezeichnung}
+            onChange={(e) => setForm((p) => ({ ...p, bezeichnung: e.target.value }))} />
+          <Select value={form.kategorie}
+            onChange={(e) => setForm((p) => ({ ...p, kategorie: e.target.value }))}>
+            {SCHADENS_KATEGORIEN.map((k) => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+          </Select>
+          <TextField required label="Betrag (€)" value={euroEingabe} placeholder="z.B. 1500.00"
+            onChange={(e) => setEuroEingabe(e.target.value)} />
+          <TextField label="Position" type="number" value={form.position}
+            onChange={(e) => setForm((p) => ({ ...p, position: Number(e.target.value) }))} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Abbrechen</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!form.beschreibung || form.betrag <= 0}>Speichern</Button>
+          <Button variant="contained" onClick={handleSave}
+            disabled={!form.bezeichnung || !euroEingabe}>Speichern</Button>
         </DialogActions>
       </Dialog>
     </>
@@ -671,12 +703,14 @@ function UnfalldatenTab({ gutachtenId }: { gutachtenId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    unfallOrt: '',
+    strasse: '',
+    plz: '',
+    stadt: '',
     unfallZeit: '',
     unfallHergang: '',
-    strassenverhaeltnisse: '',
-    witterung: '',
-    lichtverhaeltnisse: '',
+    strassenzustand: '',     // korrekt: strassenzustand (nicht strassenverhaeltnisse)
+    wetterlage: '',          // korrekt: wetterlage (nicht witterung)
+    lichtverhaeltnis: '',    // korrekt: lichtverhaeltnis (nicht lichtverhaeltnisse)
     polizeiAktenzeichen: '',
   });
 
@@ -686,12 +720,14 @@ function UnfalldatenTab({ gutachtenId }: { gutachtenId: string }) {
         if (res) {
           setData(res);
           setForm({
-            unfallOrt: res.unfallOrt ?? '',
+            strasse: res.strasse ?? '',
+            plz: res.plz ?? '',
+            stadt: res.stadt ?? '',
             unfallZeit: res.unfallZeit ? res.unfallZeit.substring(0, 16) : '',
             unfallHergang: res.unfallHergang ?? '',
-            strassenverhaeltnisse: res.strassenverhaeltnisse ?? '',
-            witterung: res.witterung ?? '',
-            lichtverhaeltnisse: res.lichtverhaeltnisse ?? '',
+            strassenzustand: res.strassenzustand ?? '',
+            wetterlage: res.wetterlage ?? '',
+            lichtverhaeltnis: res.lichtverhaeltnis ?? '',
             polizeiAktenzeichen: res.polizeiAktenzeichen ?? '',
           });
         }
@@ -702,8 +738,15 @@ function UnfalldatenTab({ gutachtenId }: { gutachtenId: string }) {
   const handleSave = async () => {
     setSaving(true);
     const res = await subresourcesApi.unfall.upsert(gutachtenId, {
-      ...form,
-      unfallZeit: form.unfallZeit || undefined,
+      strasse: form.strasse || undefined,
+      plz: form.plz || undefined,
+      stadt: form.stadt || undefined,
+      unfallZeit: form.unfallZeit ? new Date(form.unfallZeit).toISOString() : undefined,
+      unfallHergang: form.unfallHergang || undefined,
+      strassenzustand: form.strassenzustand || undefined,
+      wetterlage: form.wetterlage || undefined,
+      lichtverhaeltnis: form.lichtverhaeltnis || undefined,
+      polizeiAktenzeichen: form.polizeiAktenzeichen || undefined,
     });
     setData(res);
     setSaving(false);
@@ -714,19 +757,25 @@ function UnfalldatenTab({ gutachtenId }: { gutachtenId: string }) {
   return (
     <Grid container spacing={2}>
       <Grid item xs={12} md={6}>
-        <TextField fullWidth label="Unfallort" value={form.unfallOrt} onChange={(e) => setForm((p) => ({ ...p, unfallOrt: e.target.value }))} />
+        <TextField fullWidth label="Straße" value={form.strasse} onChange={(e) => setForm((p) => ({ ...p, strasse: e.target.value }))} />
+      </Grid>
+      <Grid item xs={12} md={2}>
+        <TextField fullWidth label="PLZ" value={form.plz} onChange={(e) => setForm((p) => ({ ...p, plz: e.target.value }))} />
+      </Grid>
+      <Grid item xs={12} md={4}>
+        <TextField fullWidth label="Stadt" value={form.stadt} onChange={(e) => setForm((p) => ({ ...p, stadt: e.target.value }))} />
       </Grid>
       <Grid item xs={12} md={6}>
         <TextField fullWidth label="Unfallzeit" type="datetime-local" InputLabelProps={{ shrink: true }} value={form.unfallZeit} onChange={(e) => setForm((p) => ({ ...p, unfallZeit: e.target.value }))} />
       </Grid>
       <Grid item xs={12} md={4}>
-        <TextField fullWidth label="Straßenverhältnisse" value={form.strassenverhaeltnisse} onChange={(e) => setForm((p) => ({ ...p, strassenverhaeltnisse: e.target.value }))} />
+        <TextField fullWidth label="Straßenzustand" value={form.strassenzustand} onChange={(e) => setForm((p) => ({ ...p, strassenzustand: e.target.value }))} placeholder="TROCKEN, NASS, VEREIST…" />
       </Grid>
       <Grid item xs={12} md={4}>
-        <TextField fullWidth label="Witterung" value={form.witterung} onChange={(e) => setForm((p) => ({ ...p, witterung: e.target.value }))} />
+        <TextField fullWidth label="Wetterlage" value={form.wetterlage} onChange={(e) => setForm((p) => ({ ...p, wetterlage: e.target.value }))} placeholder="KLAR, REGEN, SCHNEE…" />
       </Grid>
       <Grid item xs={12} md={4}>
-        <TextField fullWidth label="Lichtverhältnisse" value={form.lichtverhaeltnisse} onChange={(e) => setForm((p) => ({ ...p, lichtverhaeltnisse: e.target.value }))} />
+        <TextField fullWidth label="Lichtverhältnis" value={form.lichtverhaeltnis} onChange={(e) => setForm((p) => ({ ...p, lichtverhaeltnis: e.target.value }))} placeholder="z.B. Tag, Nacht, Dämmerung" />
       </Grid>
       <Grid item xs={12} md={6}>
         <TextField fullWidth label="Polizei-Aktenzeichen" value={form.polizeiAktenzeichen} onChange={(e) => setForm((p) => ({ ...p, polizeiAktenzeichen: e.target.value }))} />

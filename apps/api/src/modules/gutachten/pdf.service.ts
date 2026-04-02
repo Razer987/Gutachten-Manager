@@ -43,7 +43,7 @@ export async function erstelleGutachtenPdf(
       schadensposten: { orderBy: { position: 'asc' } },
       notizen: { orderBy: { createdAt: 'desc' }, take: 10 },
       aufgaben: { orderBy: { createdAt: 'asc' } },
-      unfalldaten: true,
+      unfall: true,             // korrekt: unfall (nicht unfalldaten)
     },
   });
 
@@ -168,7 +168,8 @@ export async function erstelleGutachtenPdf(
     labelValue('Name:', name);
     if (k.email) labelValue('E-Mail:', k.email);
     if (k.telefon) labelValue('Telefon:', k.telefon);
-    if (k.adresse) labelValue('Adresse:', k.adresse);
+    const adresse = [k.strasse, k.plz, k.stadt].filter(Boolean).join(', ');
+    if (adresse) labelValue('Adresse:', adresse);
   } else {
     doc.fillColor(GRAU).text('Kein Auftraggeber zugewiesen.');
   }
@@ -188,14 +189,15 @@ export async function erstelleGutachtenPdf(
   // ─── Unfalldaten ─────────────────────────────────────────────────────────────
 
   sectionTitle('4. Unfalldaten');
-  const ud = gutachten.unfalldaten;
+  const ud = gutachten.unfall;   // korrekt: unfall (nicht unfalldaten)
   if (ud) {
-    if (ud.unfallOrt) labelValue('Unfallort:', ud.unfallOrt);
+    const ort = [ud.strasse, ud.hausnummer, ud.plz, ud.stadt].filter(Boolean).join(' ');
+    if (ort) labelValue('Unfallort:', ort);
     if (ud.unfallZeit) labelValue('Unfallzeit:', fmtDate(ud.unfallZeit));
     if (ud.polizeiAktenzeichen) labelValue('Polizei-Az.:', ud.polizeiAktenzeichen);
-    if (ud.strassenverhaeltnisse) labelValue('Straßenverhältnisse:', ud.strassenverhaeltnisse);
-    if (ud.witterung) labelValue('Witterung:', ud.witterung);
-    if (ud.lichtverhaeltnisse) labelValue('Lichtverhältnisse:', ud.lichtverhaeltnisse);
+    if (ud.strassenzustand) labelValue('Straßenzustand:', ud.strassenzustand);   // korrekt: strassenzustand
+    if (ud.wetterlage) labelValue('Wetterlage:', ud.wetterlage);                 // korrekt: wetterlage
+    if (ud.lichtverhaeltnis) labelValue('Lichtverhältnis:', ud.lichtverhaeltnis); // korrekt: lichtverhaeltnis
     if (ud.unfallHergang) {
       doc.moveDown(0.3);
       doc.fillColor(GRAU).fontSize(9).text('Unfallhergang:');
@@ -219,7 +221,7 @@ export async function erstelleGutachtenPdf(
         (f.marke || f.modell) && `Marke/Modell: ${[f.marke, f.modell].filter(Boolean).join(' ')}`,
         f.baujahr && `Baujahr: ${f.baujahr}`,
         f.farbe && `Farbe: ${f.farbe}`,
-        f.fahrgestellnummer && `FIN: ${f.fahrgestellnummer}`,
+        f.fahrgestell && `FIN: ${f.fahrgestell}`,  // korrekt: fahrgestell (nicht fahrgestellnummer)
       ].filter(Boolean).join(' · ');
       doc.fillColor(DUNKEL).fontSize(10).text(info || '—');
       doc.moveDown(0.2);
@@ -261,20 +263,21 @@ export async function erstelleGutachtenPdf(
     const headY = doc.y + 4;
     doc.fillColor(DUNKEL).font('Helvetica-Bold').fontSize(9);
     doc.text('#', colX[0], headY, { width: 25, align: 'right' });
-    doc.text('Beschreibung', colX[1] + 5, headY, { width: 250 });
-    doc.text('Einheit', colX[2], headY, { width: 95 });
+    doc.text('Bezeichnung', colX[1] + 5, headY, { width: 250 });
+    doc.text('Kategorie', colX[2], headY, { width: 95 });
     doc.text('Betrag', colX[3], headY, { width: 115, align: 'right' });
     doc.moveDown(0.1);
 
-    let gesamt = 0;
+    // betragCents ist in Cent gespeichert — Division durch 100 für Euro-Anzeige
+    let gesamtCents = 0;
     gutachten.schadensposten.forEach((sp) => {
-      gesamt += sp.betrag;
+      gesamtCents += sp.betragCents;                   // korrekt: betragCents
       const y = doc.y + 3;
       doc.fillColor(DUNKEL).font('Helvetica').fontSize(9);
       doc.text(String(sp.position), colX[0], y, { width: 25, align: 'right' });
-      doc.text(sp.beschreibung, colX[1] + 5, y, { width: 250 });
-      doc.text(sp.einheit ?? '—', colX[2], y, { width: 95 });
-      doc.text(fmt(sp.betrag), colX[3], y, { width: 115, align: 'right' });
+      doc.text(sp.bezeichnung, colX[1] + 5, y, { width: 250 });  // korrekt: bezeichnung
+      doc.text(sp.kategorie ?? '—', colX[2], y, { width: 95 }); // korrekt: kategorie
+      doc.text(fmt(sp.betragCents / 100), colX[3], y, { width: 115, align: 'right' }); // Cents → Euro
     });
 
     doc.moveDown(0.3);
@@ -287,7 +290,7 @@ export async function erstelleGutachtenPdf(
     const totalY = doc.y + 3;
     doc.fillColor(DUNKEL).font('Helvetica-Bold').fontSize(10);
     doc.text('GESAMTSCHADEN:', colX[2], totalY, { width: 95 });
-    doc.text(fmt(gesamt), colX[3], totalY, { width: 115, align: 'right' });
+    doc.text(fmt(gesamtCents / 100), colX[3], totalY, { width: 115, align: 'right' }); // Cents → Euro
     doc.moveDown(0.5);
   }
 

@@ -38,10 +38,10 @@ async function erstelleBackup(): Promise<void> {
           schadensposten: true,
           notizen: true,
           aufgaben: true,
-          unfalldaten: true,
+          unfall: true,         // korrekt: unfall (nicht unfalldaten)
         },
       }),
-      prisma.kunden.findMany(),
+      prisma.kunde.findMany(),  // korrekt: prisma.kunde (Modell heißt Kunde, nicht Kunden)
       prisma.gutachter.findMany(),
       prisma.termin.findMany(),
       prisma.featureFlag.findMany(),

@@ -1,7 +1,7 @@
 /**
  * @file apps/web/src/lib/api/subresources.api.ts
- * @description API-Funktionen für Gutachten-Unterressourcen:
- *   Fahrzeuge, Personen, Schadensposten, Notizen, Aufgaben, Dateien, Audit-Log, Unfalldaten
+ * @description API-Funktionen für Gutachten-Unterressourcen.
+ * Feldnamen entsprechen dem Prisma-Schema.
  */
 
 import { apiClient } from './client';
@@ -11,24 +11,28 @@ import { apiClient } from './client';
 export interface Fahrzeug {
   id: string;
   gutachtenId: string;
-  kennzeichen: string | null;
-  fahrgestellnummer: string | null;
-  marke: string | null;
-  modell: string | null;
+  kennzeichen: string;
+  fahrgestell: string | null;   // FIN/VIN — korrekt: fahrgestell (nicht fahrgestellnummer)
+  marke: string;
+  modell: string;
   baujahr: number | null;
   farbe: string | null;
-  typ: string | null;
+  kraftstoff: string | null;
+  versicherung: string | null;
+  versicherungsNr: string | null;
   createdAt: string;
 }
 
 export interface CreateFahrzeugInput {
-  kennzeichen?: string;
-  fahrgestellnummer?: string;
-  marke?: string;
-  modell?: string;
+  kennzeichen: string;           // Pflichtfeld
+  marke: string;                 // Pflichtfeld
+  modell: string;                // Pflichtfeld
+  fahrgestell?: string;
   baujahr?: number;
   farbe?: string;
-  typ?: string;
+  kraftstoff?: string;
+  versicherung?: string;
+  versicherungsNr?: string;
 }
 
 // ─── Personen ────────────────────────────────────────────────────────────────
@@ -36,24 +40,37 @@ export interface CreateFahrzeugInput {
 export interface Person {
   id: string;
   gutachtenId: string;
-  typ: 'FAHRER' | 'ZEUGE' | 'GESCHAEDIGTER' | 'SONSTIGER';
-  vorname: string | null;
+  typ: PersonTyp;
+  vorname: string;
   nachname: string;
   geburtsdatum: string | null;
+  strasse: string | null;
+  plz: string | null;
+  stadt: string | null;
   telefon: string | null;
   email: string | null;
-  adresse: string | null;
+  fuehrerschein: string | null;
+  fuehrerscheinklasse: string | null;
+  zeugenaussage: string | null;
   createdAt: string;
 }
 
+// PersonTyp-Enum gemäß Prisma-Schema
+export type PersonTyp = 'FAHRER' | 'BEIFAHRER' | 'FUSSGAENGER' | 'ZEUGE' | 'VERLETZTE';
+
 export interface CreatePersonInput {
-  typ: 'FAHRER' | 'ZEUGE' | 'GESCHAEDIGTER' | 'SONSTIGER';
-  vorname?: string;
-  nachname: string;
+  typ: PersonTyp;
+  vorname: string;               // Pflichtfeld
+  nachname: string;              // Pflichtfeld
   geburtsdatum?: string;
+  strasse?: string;
+  plz?: string;
+  stadt?: string;
   telefon?: string;
   email?: string;
-  adresse?: string;
+  fuehrerschein?: string;
+  fuehrerscheinklasse?: string;
+  zeugenaussage?: string;
 }
 
 // ─── Schadensposten ──────────────────────────────────────────────────────────
@@ -62,21 +79,28 @@ export interface Schadensposten {
   id: string;
   gutachtenId: string;
   position: number;
-  beschreibung: string;
-  betrag: number;
-  einheit: string | null;
+  bezeichnung: string;           // Hauptbezeichnung (korrekt: nicht 'beschreibung')
+  beschreibung: string | null;   // Optionale Detailbeschreibung
+  betragCents: number;           // In Cents (nicht betrag!)
+  kategorie: string;
   createdAt: string;
 }
 
 export interface SchadenspostenSumme {
   posten: Schadensposten[];
-  gesamtbetrag: number;
+  summen: {
+    gesamtCents: number;
+    gesamtEuro: number;
+    anzahl: number;
+  };
 }
 
 export interface CreateSchadenspostenInput {
-  beschreibung: string;
-  betrag: number;
-  einheit?: string;
+  position: number;
+  bezeichnung: string;           // Pflichtfeld
+  beschreibung?: string;
+  betragCents: number;           // In Cents
+  kategorie: string;             // Pflichtfeld (z.B. 'Reparatur', 'Wertminderung')
 }
 
 // ─── Notizen ─────────────────────────────────────────────────────────────────
@@ -101,19 +125,20 @@ export interface Aufgabe {
   id: string;
   gutachtenId: string;
   titel: string;
-  beschreibung: string | null;
   erledigt: boolean;
   faelligAm: string | null;
+  prioritaet: 'NIEDRIG' | 'NORMAL' | 'HOCH' | 'KRITISCH';
   zugewiesen: string | null;
+  erledigtAm: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateAufgabeInput {
   titel: string;
-  beschreibung?: string;
   faelligAm?: string;
   zugewiesen?: string;
+  prioritaet?: 'NIEDRIG' | 'NORMAL' | 'HOCH' | 'KRITISCH';
 }
 
 // ─── Dateien ─────────────────────────────────────────────────────────────────
@@ -121,11 +146,12 @@ export interface CreateAufgabeInput {
 export interface Datei {
   id: string;
   gutachtenId: string;
-  dateiname: string;
   originalname: string;
+  filename: string;              // gespeicherter Name (korrekt: filename, nicht dateiname)
+  pfad: string;
   mimetype: string;
   groesse: number;
-  pfad: string;
+  beschreibung: string | null;
   createdAt: string;
 }
 
@@ -135,8 +161,10 @@ export interface AuditEintrag {
   id: string;
   gutachtenId: string;
   aktion: string;
-  details: string | null;
-  autor: string | null;
+  bearbeiter: string | null;
+  beschreibung: string;
+  alterWert: unknown | null;
+  neuerWert: unknown | null;
   createdAt: string;
 }
 
@@ -145,31 +173,55 @@ export interface AuditEintrag {
 export interface Unfalldaten {
   id: string;
   gutachtenId: string;
-  unfallOrt: string | null;
   unfallZeit: string | null;
+  // Adresse
+  strasse: string | null;
+  hausnummer: string | null;
+  plz: string | null;
+  stadt: string | null;
+  land: string | null;
+  // GPS
+  breitengrad: number | null;
+  laengengrad: number | null;
+  strassentyp: string | null;
+  // Hergang
   unfallHergang: string | null;
-  strassenverhaeltnisse: string | null;
-  witterung: string | null;
-  lichtverhaeltnisse: string | null;
+  // Wetter & Bedingungen
+  wetterlage: string | null;        // Enum: KLAR | BEWOELKT | REGEN | ...
+  temperatur: number | null;
+  sichtverhaeltnis: string | null;  // Enum: GUT | MITTEL | SCHLECHT | NACHT | DAEMMERUNG
+  strassenzustand: string | null;   // Enum: TROCKEN | NASS | SCHNEEBEDECKT | VEREIST | VERSCHMUTZT
+  lichtverhaeltnis: string | null;
+  // Polizei
   polizeiAktenzeichen: string | null;
+  polizeiDienststelle: string | null;
+  polizeiEinsatznummer: string | null;
+  polizeiProtokollDatum: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface UpdateUnfalldatenInput {
-  unfallOrt?: string;
   unfallZeit?: string;
+  strasse?: string;
+  hausnummer?: string;
+  plz?: string;
+  stadt?: string;
+  land?: string;
+  strassentyp?: string;
   unfallHergang?: string;
-  strassenverhaeltnisse?: string;
-  witterung?: string;
-  lichtverhaeltnisse?: string;
+  wetterlage?: string;
+  temperatur?: number;
+  sichtverhaeltnis?: string;
+  strassenzustand?: string;
+  lichtverhaeltnis?: string;
   polizeiAktenzeichen?: string;
+  polizeiDienststelle?: string;
 }
 
 // ─── API-Objekt ───────────────────────────────────────────────────────────────
 
 export const subresourcesApi = {
-  // Fahrzeuge
   fahrzeuge: {
     list: (gutachtenId: string): Promise<Fahrzeug[]> =>
       apiClient.get<Fahrzeug[]>(`/gutachten/${gutachtenId}/fahrzeuge`),
@@ -179,7 +231,6 @@ export const subresourcesApi = {
       apiClient.delete(`/gutachten/${gutachtenId}/fahrzeuge/${id}`),
   },
 
-  // Personen
   personen: {
     list: (gutachtenId: string): Promise<Person[]> =>
       apiClient.get<Person[]>(`/gutachten/${gutachtenId}/personen`),
@@ -189,7 +240,6 @@ export const subresourcesApi = {
       apiClient.delete(`/gutachten/${gutachtenId}/personen/${id}`),
   },
 
-  // Schadensposten
   schaden: {
     list: (gutachtenId: string): Promise<SchadenspostenSumme> =>
       apiClient.get<SchadenspostenSumme>(`/gutachten/${gutachtenId}/schaden`),
@@ -199,7 +249,6 @@ export const subresourcesApi = {
       apiClient.delete(`/gutachten/${gutachtenId}/schaden/${id}`),
   },
 
-  // Notizen
   notizen: {
     list: (gutachtenId: string): Promise<Notiz[]> =>
       apiClient.get<Notiz[]>(`/gutachten/${gutachtenId}/notizen`),
@@ -209,7 +258,6 @@ export const subresourcesApi = {
       apiClient.delete(`/gutachten/${gutachtenId}/notizen/${id}`),
   },
 
-  // Aufgaben
   aufgaben: {
     list: (gutachtenId: string): Promise<Aufgabe[]> =>
       apiClient.get<Aufgabe[]>(`/gutachten/${gutachtenId}/aufgaben`),
@@ -221,7 +269,6 @@ export const subresourcesApi = {
       apiClient.delete(`/gutachten/${gutachtenId}/aufgaben/${id}`),
   },
 
-  // Dateien
   dateien: {
     list: (gutachtenId: string): Promise<Datei[]> =>
       apiClient.get<Datei[]>(`/gutachten/${gutachtenId}/dateien`),
@@ -233,13 +280,11 @@ export const subresourcesApi = {
       `${process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000/api/v1'}/gutachten/${gutachtenId}/dateien/${id}/download`,
   },
 
-  // Audit-Log
   audit: {
     list: (gutachtenId: string): Promise<AuditEintrag[]> =>
       apiClient.get<AuditEintrag[]>(`/gutachten/${gutachtenId}/audit`),
   },
 
-  // Unfalldaten
   unfall: {
     get: (gutachtenId: string): Promise<Unfalldaten | null> =>
       apiClient.get<Unfalldaten | null>(`/gutachten/${gutachtenId}/unfall`),
