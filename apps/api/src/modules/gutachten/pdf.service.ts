@@ -47,7 +47,7 @@ export async function erstelleGutachtenPdf(
     },
   });
 
-  if (!gutachten) throw notFound('Gutachten nicht gefunden');
+  if (!gutachten) throw notFound('Gutachten', id);
 
   logger.info(`PDF wird erstellt: ${gutachten.aktenzeichen}`);
 
