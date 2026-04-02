@@ -22,6 +22,7 @@ import { prisma } from '@gutachten/database';
 import { app } from './app';
 import { env } from './config/env';
 import { logger } from './config/logger';
+import { starteBackupCron } from './services/backup.service';
 
 // ---------------------------------------------------------------------------
 // Notwendige Verzeichnisse erstellen
@@ -81,6 +82,9 @@ async function start(): Promise<void> {
     logger.info(`  Health-Check: http://localhost:${env.PORT}/api/v1/health`);
     logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   });
+
+  // Backup-Cron starten
+  starteBackupCron();
 
   // ---------------------------------------------------------------------------
   // Graceful Shutdown — Server sauber herunterfahren
