@@ -8,19 +8,19 @@
 import React, { useEffect, useState } from 'react';
 
 import AddIcon from '@mui/icons-material/Add';
+import BadgeIcon from '@mui/icons-material/Badge';
+import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
+import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
 import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Link from 'next/link';
 
 import { gutachterApi, type Gutachter } from '@/lib/api/gutachter.api';
 
@@ -28,47 +28,14 @@ export default function GutachterPage(): React.JSX.Element {
   const [gutachter, setGutachter] = useState<Gutachter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    vorname: '',
-    nachname: '',
-    email: '',
-    telefon: '',
-    fachgebiet: '',
-  });
 
-  const loadGutachter = () => {
-    setLoading(true);
+  useEffect(() => {
     gutachterApi
       .list()
       .then((res) => setGutachter(res.gutachter))
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  };
-
-  useEffect(loadGutachter, []);
-
-  const handleSave = async () => {
-    if (!form.vorname || !form.nachname) { return; }
-    setSaving(true);
-    try {
-      await gutachterApi.create({
-        vorname: form.vorname,
-        nachname: form.nachname,
-        email: form.email || undefined,
-        telefon: form.telefon || undefined,
-        fachgebiet: form.fachgebiet || undefined,
-      });
-      setDialogOpen(false);
-      setForm({ vorname: '', nachname: '', email: '', telefon: '', fachgebiet: '' });
-      loadGutachter();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Speichern.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  }, []);
 
   return (
     <Box>
@@ -76,7 +43,7 @@ export default function GutachterPage(): React.JSX.Element {
         <Typography variant="h4" fontWeight={700}>
           Gutachter
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
+        <Button variant="contained" startIcon={<AddIcon />} component={Link} href="/gutachter/new">
           Neuer Gutachter
         </Button>
       </Box>
@@ -90,10 +57,11 @@ export default function GutachterPage(): React.JSX.Element {
       ) : gutachter.length === 0 ? (
         <Card>
           <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <BadgeIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
             <Typography color="text.secondary" gutterBottom>
               Noch keine Gutachter angelegt.
             </Typography>
-            <Button variant="outlined" onClick={() => setDialogOpen(true)}>
+            <Button variant="outlined" component={Link} href="/gutachter/new">
               Ersten Gutachter anlegen
             </Button>
           </CardContent>
@@ -102,82 +70,43 @@ export default function GutachterPage(): React.JSX.Element {
         <Grid container spacing={2}>
           {gutachter.map((g) => (
             <Grid item xs={12} sm={6} md={4} key={g.id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={600}>
-                    {g.vorname} {g.nachname}
-                  </Typography>
-                  {g.fachgebiet && (
-                    <Chip label={g.fachgebiet} size="small" sx={{ mt: 0.5, mb: 1 }} />
-                  )}
-                  {g.email && (
-                    <Typography variant="body2" color="text.secondary">
-                      {g.email}
+              <Card sx={{ height: '100%' }}>
+                <CardActionArea component={Link} href={`/gutachter/${g.id}`} sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="h6" fontWeight={600} gutterBottom>
+                      {g.vorname} {g.nachname}
                     </Typography>
-                  )}
-                  {g.telefon && (
-                    <Typography variant="body2" color="text.secondary">
-                      {g.telefon}
-                    </Typography>
-                  )}
-                </CardContent>
+                    {g.fachgebiet && (
+                      <Chip
+                        label={g.fachgebiet}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mb: 1.5, maxWidth: '100%' }}
+                      />
+                    )}
+                    {g.email && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                        <EmailIcon fontSize="small" color="action" />
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                          {g.email}
+                        </Typography>
+                      </Box>
+                    )}
+                    {g.telefon && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <PhoneIcon fontSize="small" color="action" />
+                        <Typography variant="body2" color="text.secondary">
+                          {g.telefon}
+                        </Typography>
+                      </Box>
+                    )}
+                  </CardContent>
+                </CardActionArea>
               </Card>
             </Grid>
           ))}
         </Grid>
       )}
-
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Neuer Gutachter</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="Vorname *"
-              value={form.vorname}
-              onChange={(e) => setForm((p) => ({ ...p, vorname: e.target.value }))}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Nachname *"
-              value={form.nachname}
-              onChange={(e) => setForm((p) => ({ ...p, nachname: e.target.value }))}
-              fullWidth
-              required
-            />
-            <TextField
-              label="E-Mail"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-              fullWidth
-            />
-            <TextField
-              label="Telefon"
-              value={form.telefon}
-              onChange={(e) => setForm((p) => ({ ...p, telefon: e.target.value }))}
-              fullWidth
-            />
-            <TextField
-              label="Fachgebiet"
-              value={form.fachgebiet}
-              onChange={(e) => setForm((p) => ({ ...p, fachgebiet: e.target.value }))}
-              fullWidth
-              helperText="z.B. Unfallanalyse, KFZ-Bewertung"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Abbrechen</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saving || !form.vorname || !form.nachname}
-          >
-            Speichern
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

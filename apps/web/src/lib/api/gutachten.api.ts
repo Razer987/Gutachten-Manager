@@ -48,7 +48,11 @@ export interface GutachtenListQuery {
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
   ueberfaellig?: boolean;
+  gutachterId?: string;
+  kundeId?: string;
 }
+
+export type Gutachten = GutachtenListItem;
 
 export interface CreateGutachtenInput {
   titel: string;
