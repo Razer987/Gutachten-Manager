@@ -24,18 +24,7 @@ import ListItemText from '@mui/material/ListItemText';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { apiClient } from '@/lib/api/client';
-
-interface Termin {
-  id: string;
-  titel: string;
-  beschreibung: string | null;
-  start: string;
-  ende: string;
-  ort: string | null;
-  farbe: string | null;
-  gutachten: { id: string; aktenzeichen: string; titel: string } | null;
-}
+import { termineApi, type Termin } from '@/lib/api/termine.api';
 
 export default function KalenderPage(): React.JSX.Element {
   const [termine, setTermine] = useState<Termin[]>([]);
@@ -54,12 +43,9 @@ export default function KalenderPage(): React.JSX.Element {
   const loadTermine = () => {
     const now = new Date();
     const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-    const von = now.toISOString();
-    const bis = in90Days.toISOString();
-
     setLoading(true);
-    apiClient
-      .get<Termin[]>(`/termine?von=${encodeURIComponent(von)}&bis=${encodeURIComponent(bis)}`)
+    termineApi
+      .list({ von: now.toISOString(), bis: in90Days.toISOString() })
       .then(setTermine)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
@@ -71,12 +57,12 @@ export default function KalenderPage(): React.JSX.Element {
     if (!newTermin.titel || !newTermin.start || !newTermin.ende) { return; }
     setSaving(true);
     try {
-      await apiClient.post('/termine', {
+      await termineApi.create({
         titel: newTermin.titel,
         start: new Date(newTermin.start).toISOString(),
         ende: new Date(newTermin.ende).toISOString(),
-        ort: newTermin.ort || null,
-        beschreibung: newTermin.beschreibung || null,
+        ort: newTermin.ort || undefined,
+        beschreibung: newTermin.beschreibung || undefined,
       });
       setDialogOpen(false);
       setNewTermin({ titel: '', start: '', ende: '', ort: '', beschreibung: '' });
@@ -163,8 +149,12 @@ export default function KalenderPage(): React.JSX.Element {
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {new Date(t.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                            {' – '}
-                            {new Date(t.ende).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                            {t.ende && (
+                              <>
+                                {' – '}
+                                {new Date(t.ende).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                              </>
+                            )}
                           </Typography>
                           {t.gutachten && (
                             <Chip
@@ -177,7 +167,7 @@ export default function KalenderPage(): React.JSX.Element {
                       }
                       secondary={
                         <>
-                          {t.ort && <span>📍 {t.ort}</span>}
+                          {t.ort && <span>Ort: {t.ort}</span>}
                           {t.beschreibung && <span> — {t.beschreibung}</span>}
                         </>
                       }

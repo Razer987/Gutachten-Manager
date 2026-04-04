@@ -16,6 +16,16 @@ export const dateienController = {
     res.json({ success: true, data: dateien });
   },
 
+  async upload(req: Request, res: Response) {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'Keine Datei hochgeladen.' } });
+      return;
+    }
+    const beschreibung = typeof req.body?.beschreibung === 'string' ? req.body.beschreibung : null;
+    const datei = await dateienService.upload(req.params.gutachtenId, req.file, beschreibung);
+    res.status(201).json({ success: true, data: datei });
+  },
+
   async findById(req: Request, res: Response) {
     const datei = await dateienService.findById(req.params.gutachtenId, req.params.id);
     res.json({ success: true, data: datei });

@@ -22,14 +22,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
-import { apiClient } from '@/lib/api/client';
-
-interface FeatureFlag {
-  id: string;
-  name: string;
-  beschreibung: string | null;
-  aktiv: boolean;
-}
+import { adminApi, type FeatureFlag } from '@/lib/api/admin.api';
 
 export default function AdminPage(): React.JSX.Element {
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
@@ -37,8 +30,8 @@ export default function AdminPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiClient
-      .get<FeatureFlag[]>('/admin/feature-flags')
+    adminApi
+      .listFlags()
       .then(setFlags)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
@@ -46,8 +39,8 @@ export default function AdminPage(): React.JSX.Element {
 
   const handleToggle = async (name: string, aktiv: boolean) => {
     try {
-      await apiClient.patch(`/admin/feature-flags/${encodeURIComponent(name)}`, { aktiv });
-      setFlags((prev) => prev.map((f) => (f.name === name ? { ...f, aktiv } : f)));
+      const updated = await adminApi.toggleFlag(name, aktiv);
+      setFlags((prev) => prev.map((f) => (f.name === name ? updated : f)));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Fehler beim Aktualisieren.');
     }

@@ -17,6 +17,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PeopleIcon from '@mui/icons-material/People';
+import SearchIcon from '@mui/icons-material/Search';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { label: 'Kunden', href: '/kunden', icon: <PeopleIcon /> },
   { label: 'Gutachter', href: '/gutachter', icon: <BadgeIcon /> },
   { label: 'Kalender', href: '/kalender', icon: <CalendarMonthIcon /> },
+  { label: 'Suche', href: '/suche', icon: <SearchIcon /> },
 ] as const;
 
 const BOTTOM_NAV_ITEMS = [
