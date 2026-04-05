@@ -1,26 +1,36 @@
 @echo off
-title Gutachten-Manager - Wird gestoppt...
+setlocal
 
-echo.
-echo  +----------------------------------------------------------+
-echo  ^|       GUTACHTEN-MANAGER - STOPPEN                       ^|
-echo  +----------------------------------------------------------+
-echo.
+:: Fenster offen halten wenn per Doppelklick gestartet
+echo %CMDCMDLINE% | findstr /i "/c " >nul 2>&1
+if %errorlevel% equ 0 (
+    cmd /K ""%~f0""
+    exit /b
+)
 
 cd /d "%~dp0"
-
-echo  Stoppe alle Gutachten-Manager Container...
+cls
+color 0C
 echo.
+echo  ============================================================
+echo   GUTACHTEN-MANAGER  ^|  Wird gestoppt...
+echo  ============================================================
+echo.
+echo  Stoppe alle Container...
+echo.
+
 docker compose -f infrastructure\docker-compose.yml down
 
 if %errorlevel% equ 0 (
+    color 0A
     echo.
-    echo  Gutachten-Manager wurde erfolgreich gestoppt.
+    echo  [OK] Gutachten-Manager wurde gestoppt.
     echo  Ihre Daten sind sicher gespeichert.
 ) else (
     echo.
-    echo  Hinweis: Moeglicherweise lief die Anwendung nicht.
+    echo  Hinweis: Anwendung lief moeglicherweise nicht.
 )
 
 echo.
-pause
+echo  Druecken Sie eine beliebige Taste zum Schliessen.
+pause >nul
