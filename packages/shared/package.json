@@ -2,11 +2,12 @@
   "name": "@gutachten/shared",
   "version": "2026.03.1",
   "private": true,
-  "description": "Gemeinsame TypeScript-Typen, Konstanten und Utilities für den Gutachten-Manager",
-  "main": "src/index.ts",
+  "description": "Gemeinsame TypeScript-Typen, Konstanten und Utilities fuer den Gutachten-Manager",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

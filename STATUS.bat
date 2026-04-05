@@ -30,8 +30,8 @@ echo.
 
 echo  Container-Status:
 echo  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-docker compose --project-directory . -f infrastructure\docker-compose.yml ps
-docker compose --project-directory . -f infrastructure\docker-compose.yml ps >> "%LOG_STATUS%" 2>&1
+docker compose ps
+docker compose ps >> "%LOG_STATUS%" 2>&1
 echo.
 
 echo  Erreichbarkeit:
@@ -57,8 +57,8 @@ echo.
 
 echo  Letzte Log-Eintraege (30 Zeilen):
 echo  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-docker compose --project-directory . -f infrastructure\docker-compose.yml logs --tail=30 2>&1
-docker compose --project-directory . -f infrastructure\docker-compose.yml logs --tail=30 >> "%LOG_STATUS%" 2>&1
+docker compose logs --tail=30 2>&1
+docker compose logs --tail=30 >> "%LOG_STATUS%" 2>&1
 echo.
 
 echo  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1,46 +1,49 @@
 # =============================================================================
 # api.Dockerfile — Express.js Backend
 # =============================================================================
-# Multi-Stage-Build für optimale Image-Größe:
-#   Stage 1 (builder): Installiert Abhängigkeiten und kompiliert TypeScript
-#   Stage 2 (runner):  Nur Production-Dependencies und kompilierter Code
+# Build-Kontext: Projektstamm (docker compose context: .)
 #
-# Verwendung:
-#   docker build -f infrastructure/docker/api.Dockerfile -t gutachten-api .
+# Stage 1 (builder): Installiert alle Abhaengigkeiten, kompiliert TypeScript
+# Stage 2 (runner):  Minimales Production-Image
 # =============================================================================
 
 # ---- Stage 1: Builder ----
 FROM node:20-alpine AS builder
 
-# Metadaten
-LABEL maintainer="Gutachten-Manager"
-LABEL description="Express.js API Builder"
+LABEL description="Gutachten-Manager API Builder"
 
 WORKDIR /app
 
-# pnpm installieren
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# pnpm aktivieren (via corepack, in Node 20 enthalten)
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
-# Workspace-Konfiguration kopieren (für pnpm workspaces)
+# Workspace-Root-Konfiguration zuerst kopieren (fuer pnpm install Cache)
 COPY package.json pnpm-workspace.yaml turbo.json ./
 
-# Package-JSONs aller Pakete kopieren (für pnpm install caching)
-COPY packages/config/package.json ./packages/config/
-COPY packages/shared/package.json ./packages/shared/
+# Package.json aller Workspace-Pakete kopieren (Cache-Layer)
+COPY packages/config/package.json   ./packages/config/
+COPY packages/shared/package.json   ./packages/shared/
 COPY packages/database/package.json ./packages/database/
-COPY apps/api/package.json ./apps/api/
+COPY apps/api/package.json          ./apps/api/
 
-# Abhängigkeiten installieren (cached wenn keine package.json sich ändert)
-RUN pnpm install --frozen-lockfile
+# Abhaengigkeiten installieren
+# --no-frozen-lockfile: Kein pnpm-lock.yaml im Repo erforderlich
+RUN pnpm install --no-frozen-lockfile
 
 # Quellcode kopieren
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-# Prisma-Client generieren
+# 1. Prisma-Client generieren (erzeugt node_modules/.prisma/client)
 RUN pnpm --filter @gutachten/database db:generate
 
-# TypeScript kompilieren
+# 2. Shared-Package kompilieren (wird von der API importiert)
+RUN pnpm --filter @gutachten/shared build
+
+# 3. Database-Package kompilieren (wird von der API importiert)
+RUN pnpm --filter @gutachten/database build
+
+# 4. API kompilieren
 RUN pnpm --filter api build
 
 
@@ -49,35 +52,56 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Nur Production-Abhängigkeiten
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Nicht-root Benutzer für Sicherheit
+# Nicht-Root-Benutzer fuer Sicherheit
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 api
+  && adduser  --system --uid 1001 api
 
-# Kompilierten Code und Abhängigkeiten aus Builder kopieren
+# -----------------------------------------------------------------------
+# Compiled API
+# -----------------------------------------------------------------------
 COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
 
-# Uploads-Verzeichnis erstellen und Berechtigungen setzen
-RUN mkdir -p /app/uploads /app/logs \
-  && chown -R api:nodejs /app/uploads /app/logs
+# -----------------------------------------------------------------------
+# node_modules (enthaelt alle externen Pakete + pnpm-Symlinks + .prisma)
+# -----------------------------------------------------------------------
+COPY --from=builder /app/node_modules ./node_modules
+
+# -----------------------------------------------------------------------
+# Workspace-Pakete (kompiliert): Symlinks in node_modules zeigen hierauf
+# node_modules/@gutachten/database -> ../../packages/database
+# node_modules/@gutachten/shared   -> ../../packages/shared
+# -----------------------------------------------------------------------
+COPY --from=builder /app/packages/database/dist        ./packages/database/dist
+COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
+COPY --from=builder /app/packages/shared/dist          ./packages/shared/dist
+COPY --from=builder /app/packages/shared/package.json   ./packages/shared/package.json
+
+# -----------------------------------------------------------------------
+# Prisma-Schema (wird von prisma migrate deploy benoetigt)
+# -----------------------------------------------------------------------
+COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
+
+# -----------------------------------------------------------------------
+# Verzeichnisse erstellen und Rechte setzen
+# -----------------------------------------------------------------------
+RUN mkdir -p /app/uploads /app/logs /app/backups \
+  && chown -R api:nodejs /app/uploads /app/logs /app/backups /app/dist
+
+# Entrypoint-Script kopieren und ausfuehrbar machen (als root, vor USER-Wechsel)
+COPY infrastructure/docker/api-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Zu nicht-root Benutzer wechseln
 USER api
 
-# Gesundheitscheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/v1/health || exit 1
-
-# Port freigeben
+# Port und Umgebungsvariablen
 EXPOSE 4000
-
-# Umgebungsvariablen
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Anwendung starten
-CMD ["node", "dist/server.js"]
+# Health-Check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/v1/health || exit 1
+
+# Entrypoint: Migration + Server-Start
+ENTRYPOINT ["/entrypoint.sh"]

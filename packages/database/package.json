@@ -3,12 +3,14 @@
   "version": "2026.03.1",
   "private": true,
   "description": "Prisma ORM Schema, Migrationen und Datenbank-Client für den Gutachten-Manager",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
-    "db:seed": "ts-node seeds/index.ts",
+    "db:seed": "ts-node --project tsconfig.seed.json seeds/index.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset"
   },

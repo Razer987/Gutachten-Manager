@@ -19,7 +19,7 @@ echo.
 echo  Stoppe alle Container...
 echo.
 
-docker compose --project-directory . -f infrastructure\docker-compose.yml down
+docker compose down
 
 if %errorlevel% equ 0 (
     color 0A
