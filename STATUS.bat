@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal
 
 :: Fenster offen halten wenn per Doppelklick gestartet
 echo %CMDCMDLINE% | findstr /i "/c " >nul 2>&1
@@ -10,7 +10,6 @@ if %errorlevel% equ 0 (
 
 cd /d "%~dp0"
 if not exist "logs" mkdir logs
-
 set LOG_STATUS=logs\status-aktuell.log
 
 (
@@ -31,9 +30,8 @@ echo.
 
 echo  Container-Status:
 echo  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-docker compose -f infrastructure\docker-compose.yml ps 2>&1 | tee /dev/null
-docker compose -f infrastructure\docker-compose.yml ps >> "%LOG_STATUS%" 2>&1
-docker compose -f infrastructure\docker-compose.yml ps
+docker compose --project-directory . -f infrastructure\docker-compose.yml ps
+docker compose --project-directory . -f infrastructure\docker-compose.yml ps >> "%LOG_STATUS%" 2>&1
 echo.
 
 echo  Erreichbarkeit:
@@ -42,7 +40,6 @@ curl -s --max-time 5 http://localhost/api/v1/health >nul 2>&1
 if %errorlevel% equ 0 (
     color 0A
     echo   [OK]  http://localhost          ERREICHBAR
-    echo   [OK]  http://localhost/api/v1   ERREICHBAR
     echo   [OK]  ERREICHBAR >> "%LOG_STATUS%"
 ) else (
     color 0C
@@ -60,8 +57,8 @@ echo.
 
 echo  Letzte Log-Eintraege (30 Zeilen):
 echo  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-docker compose -f infrastructure\docker-compose.yml logs --tail=30 2>&1
-docker compose -f infrastructure\docker-compose.yml logs --tail=30 >> "%LOG_STATUS%" 2>&1
+docker compose --project-directory . -f infrastructure\docker-compose.yml logs --tail=30 2>&1
+docker compose --project-directory . -f infrastructure\docker-compose.yml logs --tail=30 >> "%LOG_STATUS%" 2>&1
 echo.
 
 echo  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

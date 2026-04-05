@@ -19,13 +19,13 @@ echo.
 echo  Stoppe alle Container...
 echo.
 
-docker compose -f infrastructure\docker-compose.yml down
+docker compose --project-directory . -f infrastructure\docker-compose.yml down
 
 if %errorlevel% equ 0 (
     color 0A
     echo.
     echo  [OK] Gutachten-Manager wurde gestoppt.
-    echo  Ihre Daten sind sicher gespeichert.
+    echo  Ihre Daten sind sicher in der Datenbank gespeichert.
 ) else (
     echo.
     echo  Hinweis: Anwendung lief moeglicherweise nicht.

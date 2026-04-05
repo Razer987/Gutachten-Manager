@@ -14,31 +14,29 @@ if %errorlevel% equ 0 (
     exit /b
 )
 
-:: Ins Projektverzeichnis wechseln
+:: Ins Projektverzeichnis wechseln (wo die .bat liegt)
 cd /d "%~dp0"
 
 :: =============================================================================
 :: LOG-DATEI einrichten
-:: Speichert alle Ausgaben nach logs\starten-DATUM-UHRZEIT.log
 :: =============================================================================
 
 if not exist "logs" mkdir logs
 
-:: Zeitstempel fuer Dateiname (YYYY-MM-DD_HH-MM-SS)
-for /f "tokens=1-3 delims=." %%a in ("%DATE%") do (
-    set LOG_DATUM=%%c-%%b-%%a
-)
-for /f "tokens=1-3 delims=:," %%a in ("%TIME: =0%") do (
-    set LOG_ZEIT=%%a-%%b-%%c
-)
-set LOG_ZEIT=%LOG_ZEIT:~0,8%
-set LOG_DATEI=logs\starten-%LOG_DATUM%_%LOG_ZEIT%.log
-
-:: Letzte Log-Datei auch immer als "starten-aktuell.log" speichern (leicht zu finden)
 set LOG_AKTUELL=logs\starten-aktuell.log
+set LOG_DATEI=logs\starten-%DATE:~6,4%-%DATE:~3,2%-%DATE:~0,2%_%TIME:~0,2%-%TIME:~3,2%-%TIME:~6,2%.log
+set LOG_DATEI=%LOG_DATEI: =0%
 
-:: Log-Header schreiben
-call :LOG_INIT
+(
+    echo ================================================================
+    echo  GUTACHTEN-MANAGER -- Startprotokoll
+    echo  Datum:  %DATE%
+    echo  Zeit:   %TIME%
+    echo  Pfad:   %~f0
+    echo  Windows: %OS%
+    echo ================================================================
+    echo.
+) > "%LOG_AKTUELL%"
 
 :: =============================================================================
 :: HEADER
@@ -49,18 +47,53 @@ call :ECHO  "============================================================"
 call :ECHO  " GUTACHTEN-MANAGER  |  Version 2026.03.1"
 call :ECHO  "============================================================"
 call :ECHO  ""
-call :LOG   "Startvorgang begonnen"
-call :LOG   "Betriebssystem: %OS%"
-call :LOG   "Verzeichnis:    %CD%"
 
 :: =============================================================================
-:: SCHRITT 1: Docker pruefen
+:: SCHRITT 1: Verzeichnis-Struktur pruefen
 :: =============================================================================
-call :ECHO  "[SCHRITT 1/5]  Docker pruefen..."
+call :ECHO  "[SCHRITT 1/6]  Verzeichnis pruefen..."
+call :ECHO  "-------------------------------------------------------"
+
+call :LOG "Aktuelles Verzeichnis: %CD%"
+
+if not exist "infrastructure\docker-compose.yml" (
+    call :LOG "FEHLER: infrastructure\docker-compose.yml nicht gefunden"
+    color 0C
+    call :ECHO  "[FEHLER] Datei nicht gefunden: infrastructure\docker-compose.yml"
+    call :ECHO  ""
+    call :ECHO  "Moegliche Ursachen:"
+    call :ECHO  "  - ZIP-Archiv nicht vollstaendig entpackt"
+    call :ECHO  "  - Falscher Ordner geoeffnet"
+    call :ECHO  ""
+    call :ECHO  "Stellen Sie sicher, dass STARTEN.bat direkt im"
+    call :ECHO  "Gutachten-Manager Ordner liegt (neben infrastructure\)."
+    call :ECHO  ""
+    call :ECHO_LOGHINWEIS
+    pause >nul
+    exit /b 1
+)
+
+if not exist "infrastructure\docker\api.Dockerfile" (
+    call :LOG "FEHLER: api.Dockerfile nicht gefunden"
+    color 0C
+    call :ECHO  "[FEHLER] Dockerfiles fehlen in infrastructure\docker\"
+    call :ECHO  "Bitte das ZIP-Archiv erneut vollstaendig entpacken."
+    call :ECHO  ""
+    call :ECHO_LOGHINWEIS
+    pause >nul
+    exit /b 1
+)
+
+call :ECHO  "[OK] Verzeichnisstruktur vollstaendig."
+call :ECHO  ""
+
+:: =============================================================================
+:: SCHRITT 2: Docker pruefen
+:: =============================================================================
+call :ECHO  "[SCHRITT 2/6]  Docker pruefen..."
 call :ECHO  "-------------------------------------------------------"
 
 set DOCKER_OK=0
-
 where docker >nul 2>&1
 if %errorlevel% equ 0 set DOCKER_OK=1
 
@@ -68,16 +101,14 @@ if %DOCKER_OK% equ 0 (
     if exist "C:\Program Files\Docker\Docker\resources\bin\docker.exe" (
         set "PATH=%PATH%;C:\Program Files\Docker\Docker\resources\bin"
         set DOCKER_OK=1
-        call :LOG "Docker gefunden: C:\Program Files\Docker\Docker\resources\bin"
+        call :LOG "Docker PATH ergaenzt: C:\Program Files\Docker\Docker\resources\bin"
     )
 )
 
 if %DOCKER_OK% equ 0 (
     call :LOG "FEHLER: Docker nicht gefunden"
     color 0C
-    echo.
     call :ECHO  "[FEHLER] Docker wurde nicht gefunden!"
-    call :ECHO  ""
     call :ECHO  "Bitte Docker Desktop installieren:"
     call :ECHO  "  https://www.docker.com/products/docker-desktop"
     call :ECHO  ""
@@ -89,29 +120,27 @@ if %DOCKER_OK% equ 0 (
 docker ps >nul 2>&1
 if %errorlevel% neq 0 (
     call :LOG "FEHLER: Docker Daemon antwortet nicht"
-    call :ECHO  "Docker ist installiert, aber noch nicht gestartet."
-    call :ECHO  "Starte Docker Desktop automatisch..."
+    call :ECHO  "Docker Desktop ist installiert, laeuft aber noch nicht."
+    call :ECHO  "Starte Docker Desktop..."
     start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe" >nul 2>&1
     call :ECHO  ""
-    call :ECHO  "Bitte warten Sie bis das Wal-Symbol in der Taskleiste"
-    call :ECHO  "erscheint (ca. 30 Sekunden), dann starten Sie STARTEN.bat erneut."
+    call :ECHO  "Warten Sie bis das Wal-Symbol in der Taskleiste erscheint"
+    call :ECHO  "(ca. 30 Sekunden), dann STARTEN.bat erneut ausfuehren."
     call :ECHO  ""
     call :ECHO_LOGHINWEIS
     pause >nul
     exit /b 1
 )
 
-:: Docker-Version ins Log schreiben
-for /f "tokens=*" %%v in ('docker --version 2^>^&1') do call :LOG "Docker-Version: %%v"
-for /f "tokens=*" %%v in ('docker compose version 2^>^&1') do call :LOG "Compose-Version: %%v"
-
+for /f "tokens=*" %%v in ('docker --version 2^>^&1') do call :LOG "%%v"
+for /f "tokens=*" %%v in ('docker compose version 2^>^&1') do call :LOG "%%v"
 call :ECHO  "[OK] Docker laeuft."
 call :ECHO  ""
 
 :: =============================================================================
-:: SCHRITT 2: Konfiguration pruefen
+:: SCHRITT 3: Konfiguration pruefen
 :: =============================================================================
-call :ECHO  "[SCHRITT 2/5]  Konfiguration pruefen..."
+call :ECHO  "[SCHRITT 3/6]  Konfiguration pruefen..."
 call :ECHO  "-------------------------------------------------------"
 
 if not exist ".env" (
@@ -120,89 +149,83 @@ if not exist ".env" (
         call :ECHO  "[OK] .env wurde aus .env.example erstellt."
         call :LOG   ".env aus .env.example erstellt"
     ) else (
-        call :LOG "FEHLER: Keine .env und keine .env.example gefunden"
+        call :LOG "FEHLER: Weder .env noch .env.example gefunden"
         color 0C
-        call :ECHO  ""
-        call :ECHO  "[FEHLER] Keine .env Datei gefunden!"
-        call :ECHO  "Bitte stellen Sie sicher, dass Sie das Archiv"
-        call :ECHO  "vollstaendig entpackt haben."
+        call :ECHO  "[FEHLER] Keine .env Konfigurationsdatei gefunden!"
+        call :ECHO  "Benennen Sie .env.example in .env um."
         call :ECHO  ""
         call :ECHO_LOGHINWEIS
         pause >nul
         exit /b 1
     )
 ) else (
+    call :LOG ".env vorhanden"
     call :ECHO  "[OK] .env vorhanden."
-    call :LOG   ".env vorhanden"
-)
-
-:: Wichtige .env Werte ins Log schreiben (ohne Passwoerter)
-for /f "tokens=1 delims==" %%k in (.env) do (
-    echo %%k | findstr /i "PORT HOST NODE_ENV" >nul 2>&1
-    if !errorlevel! equ 0 (
-        for /f "tokens=1,2 delims==" %%a in (.env) do (
-            if "%%a"=="%%k" call :LOG "  Konfiguration: %%a=%%b"
-        )
-    )
 )
 call :ECHO  ""
 
 :: =============================================================================
-:: SCHRITT 3: Alte Container bereinigen
+:: SCHRITT 4: Alte Container bereinigen
 :: =============================================================================
-call :ECHO  "[SCHRITT 3/5]  Alte Container bereinigen..."
+call :ECHO  "[SCHRITT 4/6]  Alte Container bereinigen..."
 call :ECHO  "-------------------------------------------------------"
-call :LOG   "Starte: docker compose down"
-docker compose -f infrastructure\docker-compose.yml down --remove-orphans >> "%LOG_AKTUELL%" 2>&1
-docker compose -f infrastructure\docker-compose.yml down --remove-orphans >nul 2>&1
+call :LOG   "docker compose down..."
+docker compose --project-directory . -f infrastructure\docker-compose.yml down --remove-orphans >> "%LOG_AKTUELL%" 2>&1
 call :ECHO  "[OK] Bereinigt."
 call :ECHO  ""
 
 :: =============================================================================
-:: SCHRITT 4: Container bauen und starten
+:: SCHRITT 5: Container bauen und starten
 :: =============================================================================
-call :ECHO  "[SCHRITT 4/5]  Container starten..."
+call :ECHO  "[SCHRITT 5/6]  Container starten..."
 call :ECHO  "-------------------------------------------------------"
 call :ECHO  ""
 
-docker image inspect gutachten-manager-api >nul 2>&1
+docker image inspect gutachten_api >nul 2>&1
 if %errorlevel% equ 0 (
-    call :ECHO  "   Bekannte Images gefunden -- schneller Start (~30s)"
-    call :LOG   "Images vorhanden: Folgestart"
+    call :ECHO  "  Bekannte Images gefunden -- schneller Start (~30-60s)"
+    call :LOG   "Folgestart: Images vorhanden"
 ) else (
-    call :ECHO  "   Erster Start -- Images werden gebaut (~5-15 Minuten)"
-    call :ECHO  "   Bitte haben Sie Geduld..."
-    call :LOG   "Images fehlen: Erststart, Build noetig"
+    call :ECHO  "  Erster Start -- Images werden jetzt gebaut (~5-15 Min)"
+    call :ECHO  "  Bitte haben Sie Geduld, der Fortschritt erscheint unten."
+    call :LOG   "Erststart: Images fehlen, Build wird ausgefuehrt"
 )
 call :ECHO  ""
-call :ECHO  "   Docker-Ausgabe (wird auch in Logdatei gespeichert):"
-call :ECHO  "   - - - - - - - - - - - - - - - - - - - - - - - - -"
+call :ECHO  "  Docker-Ausgabe:"
+call :ECHO  "  - - - - - - - - - - - - - - - - - - - - - - - - - -"
+call :LOG   "Starte: docker compose --project-directory . -f infrastructure\docker-compose.yml up --build -d"
 
-call :LOG   "Starte: docker compose up --build -d"
-
-:: Docker-Output gleichzeitig auf Konsole UND in Logdatei (via PowerShell Tee)
-powershell -Command "& { $p = Start-Process -FilePath 'docker' -ArgumentList 'compose','-f','infrastructure\docker-compose.yml','up','--build','-d' -NoNewWindow -Wait -PassThru -RedirectStandardOutput '%TEMP%\gm_out.txt' -RedirectStandardError '%TEMP%\gm_err.txt'; Get-Content '%TEMP%\gm_out.txt','%TEMP%\gm_err.txt' | Tee-Object -FilePath '%LOG_AKTUELL%' -Append; exit $p.ExitCode }"
+:: Docker-Output in temporaere Datei umleiten, dann anzeigen + loggen
+:: --project-directory . stellt sicher, dass Pfade relativ zum Projektstamm sind
+docker compose --project-directory . -f infrastructure\docker-compose.yml up --build -d > "%TEMP%\gm_docker_out.txt" 2>&1
 set BUILD_EXIT=%errorlevel%
 
-:: Output nochmal auf Konsole zeigen (war wegen Redirect nicht sichtbar)
-if exist "%TEMP%\gm_out.txt" type "%TEMP%\gm_out.txt"
-if exist "%TEMP%\gm_err.txt" type "%TEMP%\gm_err.txt"
+:: Ausgabe auf Konsole zeigen
+type "%TEMP%\gm_docker_out.txt"
+:: Ausgabe ins Log schreiben
+type "%TEMP%\gm_docker_out.txt" >> "%LOG_AKTUELL%"
 
-call :ECHO  "   - - - - - - - - - - - - - - - - - - - - - - - - -"
+call :ECHO  "  - - - - - - - - - - - - - - - - - - - - - - - - - -"
 
 if %BUILD_EXIT% neq 0 (
-    call :LOG "FEHLER: docker compose up fehlgeschlagen (Exit %BUILD_EXIT%)"
+    call :LOG "FEHLER: docker compose up fehlgeschlagen (Exit-Code: %BUILD_EXIT%)"
     color 0C
     call :ECHO  ""
     call :ECHO  "[FEHLER] Docker Compose ist fehlgeschlagen!"
     call :ECHO  ""
-    call :ECHO  "Container-Logs werden in Logdatei geschrieben..."
-    docker compose -f infrastructure\docker-compose.yml logs --tail=50 >> "%LOG_AKTUELL%" 2>&1
+
+    :: Container-Logs fuer Diagnose
+    call :ECHO  "  Container-Logs (letzte 40 Zeilen):"
+    call :ECHO  "  - - - - - - - - - - - - - - - - - - - - - - - - -"
+    docker compose --project-directory . -f infrastructure\docker-compose.yml logs --tail=40 2>&1
+    docker compose --project-directory . -f infrastructure\docker-compose.yml logs --tail=40 >> "%LOG_AKTUELL%" 2>&1
+    call :ECHO  "  - - - - - - - - - - - - - - - - - - - - - - - - -"
+
     call :ECHO  ""
-    call :ECHO  "Tipps zur Fehlerbehebung:"
-    call :ECHO  "  - Port 80 belegt?   Andere App auf Port 80 beenden."
-    call :ECHO  "  - Port 5432 belegt? Lokales PostgreSQL beenden."
-    call :ECHO  "  - Antivirus?        Projektordner als Ausnahme hinzufuegen."
+    call :ECHO  "  Haeufige Ursachen:"
+    call :ECHO  "    Port 80 belegt?   -> Anderen Webserver beenden"
+    call :ECHO  "    Port 5432 belegt? -> Lokales PostgreSQL beenden"
+    call :ECHO  "    Antivirus?        -> Projektordner als Ausnahme"
     call :ECHO  ""
     call :ECHO_LOGHINWEIS
     pause >nul
@@ -215,12 +238,12 @@ call :ECHO  "[OK] Container gestartet."
 call :ECHO  ""
 
 :: =============================================================================
-:: SCHRITT 5: Warten bis App bereit ist
+:: SCHRITT 6: Warten bis App bereit ist
 :: =============================================================================
-call :ECHO  "[SCHRITT 5/5]  Warte bis Anwendung bereit ist..."
+call :ECHO  "[SCHRITT 6/6]  Warte bis Anwendung bereit ist..."
 call :ECHO  "-------------------------------------------------------"
 call :ECHO  ""
-call :LOG   "Warte auf Health-Check http://localhost/api/v1/health"
+call :LOG   "Health-Check laeuft..."
 
 set VERSUCHE=0
 set MAX_VERSUCHE=60
@@ -243,12 +266,13 @@ if %errorlevel% equ 0 goto BEREIT
 
 if %VERSUCHE% geq %MAX_VERSUCHE% (
     call :LOG "WARNUNG: Timeout nach %MAX_VERSUCHE% Versuchen"
+    docker compose --project-directory . -f infrastructure\docker-compose.yml logs --tail=30 >> "%LOG_AKTUELL%" 2>&1
     call :ECHO  ""
     call :ECHO  "[WARNUNG] Timeout -- App antwortet noch nicht."
-    call :ECHO  "Moegliche Ursache: Datenbank-Migration laeuft noch."
+    call :ECHO  "Datenbank-Migration laeuft evtl. noch."
     call :ECHO  "Bitte http://localhost in 1-2 Minuten manuell oeffnen."
     call :ECHO  ""
-    docker compose -f infrastructure\docker-compose.yml logs --tail=30 >> "%LOG_AKTUELL%" 2>&1
+    call :ECHO_LOGHINWEIS
     goto OEFFNE_BROWSER
 )
 
@@ -258,18 +282,14 @@ goto WARTE_SCHLEIFE
 :BEREIT
 call :LOG "Health-Check erfolgreich nach %VERSUCHE% Versuchen"
 call :ECHO  ""
-call :ECHO  ""
-call :ECHO  "[OK] Anwendung ist bereit! (nach %VERSUCHE% Versuchen)"
+call :ECHO  "[OK] Anwendung ist bereit!"
 call :ECHO  ""
 
 :OEFFNE_BROWSER
-call :ECHO  "Browser wird geoeffnet..."
-call :LOG   "Oeffne http://localhost im Browser"
+call :LOG "Oeffne http://localhost"
 timeout /t 1 >nul 2>&1
 start "" "http://localhost"
-
-:: Container-Status ins Log schreiben
-docker compose -f infrastructure\docker-compose.yml ps >> "%LOG_AKTUELL%" 2>&1
+docker compose --project-directory . -f infrastructure\docker-compose.yml ps >> "%LOG_AKTUELL%" 2>&1
 
 :: =============================================================================
 :: FERTIG
@@ -281,11 +301,11 @@ call :ECHO  "============================================================"
 call :ECHO  ""
 call :ECHO  " Gutachten-Manager laeuft!"
 call :ECHO  ""
-call :ECHO  "  Adresse:   http://localhost"
-call :ECHO  "  API:       http://localhost/api/v1"
+call :ECHO  "  Adresse:  http://localhost"
+call :ECHO  "  API:      http://localhost/api/v1"
 call :ECHO  ""
-call :ECHO  "  STOPPEN:   Doppelklick auf  BEENDEN.bat"
-call :ECHO  "  STATUS:    Doppelklick auf  STATUS.bat"
+call :ECHO  "  STOPPEN:  Doppelklick auf BEENDEN.bat"
+call :ECHO  "  STATUS:   Doppelklick auf STATUS.bat"
 call :ECHO  ""
 call :ECHO_LOGHINWEIS
 call :ECHO  "============================================================"
@@ -300,36 +320,19 @@ goto :EOF
 :: HILFSFUNKTIONEN
 :: =============================================================================
 
-:LOG_INIT
-    (
-        echo ================================================================
-        echo  GUTACHTEN-MANAGER — Startprotokoll
-        echo  Datum:  %DATE%
-        echo  Zeit:   %TIME%
-        echo  Datei:  %~f0
-        echo ================================================================
-        echo.
-    ) > "%LOG_AKTUELL%"
-    copy "%LOG_AKTUELL%" "%LOG_DATEI%" >nul 2>&1
-    goto :EOF
-
 :LOG
-    :: Schreibt eine Zeile mit Zeitstempel in die Logdatei
     echo [%TIME%] %~1 >> "%LOG_AKTUELL%"
-    copy "%LOG_AKTUELL%" "%LOG_DATEI%" >nul 2>&1
     goto :EOF
 
 :ECHO
-    :: Gibt eine Zeile auf Konsole aus UND schreibt sie ins Log
     echo  %~1
     echo [%TIME%] %~1 >> "%LOG_AKTUELL%"
-    copy "%LOG_AKTUELL%" "%LOG_DATEI%" >nul 2>&1
     goto :EOF
 
 :ECHO_LOGHINWEIS
     echo.
     echo  -------------------------------------------------------
-    echo  Logdatei fuer Fehleranalyse:
+    echo  Logdatei (bei Fehler bitte mitsenden):
     echo    %CD%\%LOG_AKTUELL%
     echo  -------------------------------------------------------
     echo.
