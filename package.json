@@ -1,6 +1,6 @@
 {
   "name": "gutachten-manager",
-  "version": "2026.03.1",
+  "version": "2026.3.1",
   "private": true,
   "description": "Professionelles Management-System für unfallanalytische und unfalltechnische Gutachten",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "web",
-  "version": "2026.03.1",
+  "version": "2026.3.1",
   "private": true,
   "description": "Next.js Frontend für den Gutachten-Manager",
   "scripts": {
