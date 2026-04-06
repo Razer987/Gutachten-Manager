@@ -10,7 +10,6 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
-    "@gutachten/config": "workspace:*"
+    "typescript": "^5.7.3"
   }
 }

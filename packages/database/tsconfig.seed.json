@@ -1,5 +1,5 @@
 {
-  "extends": "@gutachten/config/tsconfig/node.json",
+  "extends": "../config/tsconfig/node.json",
   "compilerOptions": {
     "outDir": "dist-seed",
     "rootDir": "."
