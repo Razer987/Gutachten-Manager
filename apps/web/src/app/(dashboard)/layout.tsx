@@ -1,3 +1,7 @@
+// Alle Dashboard-Seiten dynamisch rendern (keine statische Generierung)
+// noetig weil Seiten API-Calls und useSearchParams verwenden
+export const dynamic = 'force-dynamic';
+
 /**
  * @file apps/web/src/app/(dashboard)/layout.tsx
  * @description Layout für alle Dashboard-Seiten.
