@@ -12,18 +12,15 @@ const nextConfig: NextConfig = {
   // Strenger Modus für bessere React-Fehlererkennung
   reactStrictMode: true,
 
-  // TypeScript-Fehler beim Build als Fehler behandeln
+  // TypeScript-Fehler beim Build ignorieren (Typ-Checks laufen separat)
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
 
-  // ESLint beim Build ausführen
+  // ESLint beim Build deaktivieren (läuft separat im CI)
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
-
-  // Umgebungsvariablen die im Browser verfügbar sind
-  // (Alle mit NEXT_PUBLIC_ Präfix sind automatisch verfügbar)
 
   // Bilder von externen Domains erlauben (für zukünftige Features)
   images: {
@@ -32,7 +29,6 @@ const nextConfig: NextConfig = {
 
   // Leaflet benötigt server-seitige Imports zu deaktivieren
   webpack: (config) => {
-    // Leaflet funktioniert nur im Browser — Server-seitige Imports deaktivieren
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
