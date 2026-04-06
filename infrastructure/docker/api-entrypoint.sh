@@ -31,14 +31,15 @@ done
 echo "[Entrypoint] Datenbank erreichbar."
 
 # -----------------------------------------------------------------------
-# Schritt 2: Prisma Migrationen anwenden
+# Schritt 2: Schema anwenden (db push erstellt Tabellen ohne Migrationsdateien)
 # -----------------------------------------------------------------------
-echo "[Entrypoint] Fuehre Datenbankmigrationen durch..."
+echo "[Entrypoint] Wende Datenbankschema an (prisma db push)..."
 
-node_modules/.bin/prisma migrate deploy \
-  --schema packages/database/prisma/schema.prisma
+node_modules/.bin/prisma db push \
+  --schema packages/database/prisma/schema.prisma \
+  --accept-data-loss
 
-echo "[Entrypoint] Migrationen abgeschlossen."
+echo "[Entrypoint] Schema angewendet."
 
 # -----------------------------------------------------------------------
 # Schritt 3: API-Server starten
