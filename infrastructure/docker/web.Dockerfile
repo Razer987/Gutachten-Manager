@@ -16,7 +16,8 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Workspace-Konfiguration
 COPY package.json pnpm-workspace.yaml turbo.json ./
-COPY packages/config/package.json  ./packages/config/
+# packages/config vollstaendig kopieren (pnpm braucht index.js + tsconfig/* fuer workspace-Erkennung)
+COPY packages/config/  ./packages/config/
 COPY packages/shared/package.json  ./packages/shared/
 COPY apps/web/package.json         ./apps/web/
 
