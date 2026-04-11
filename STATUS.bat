@@ -36,7 +36,7 @@ echo.
 
 echo  Erreichbarkeit:
 echo  - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-curl -s --max-time 5 http://localhost/api/v1/health >nul 2>&1
+powershell -NonInteractive -Command "try{$r=(Invoke-WebRequest 'http://localhost/api/v1/health' -UseBasicParsing -TimeoutSec 5 -EA Stop).StatusCode;exit ($r -ne 200)}catch{exit 1}" >nul 2>&1
 if %errorlevel% equ 0 (
     color 0A
     echo   [OK]  http://localhost          ERREICHBAR
