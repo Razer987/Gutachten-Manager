@@ -5,10 +5,10 @@ import { z } from 'zod';
 
 export const CreateSchadenspostenSchema = z.object({
   position: z.coerce.number().int().min(1),
-  bezeichnung: z.string().min(1).max(500),
-  beschreibung: z.string().optional().nullable(),
+  bezeichnung: z.string().trim().min(1).max(500),
+  beschreibung: z.string().trim().optional().nullable(),
   betragCents: z.coerce.number().int().min(0),
-  kategorie: z.string().min(1).max(100),
+  kategorie: z.string().trim().min(1).max(100),
 });
 
 export const UpdateSchadenspostenSchema = CreateSchadenspostenSchema.partial();

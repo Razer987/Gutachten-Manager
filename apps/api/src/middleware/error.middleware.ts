@@ -40,6 +40,21 @@ export function conflict(message: string): AppError {
   return new AppError(409, API_ERROR_CODES.CONFLICT, message);
 }
 
+/** Erstellt einen standardisierten 400-Fehler für ungültige Anfragen */
+export function badRequest(message: string): AppError {
+  return new AppError(400, API_ERROR_CODES.BAD_REQUEST, message);
+}
+
+/** Erstellt einen standardisierten 401-Fehler für fehlende Authentifizierung */
+export function unauthorized(message = 'Authentifizierung erforderlich.'): AppError {
+  return new AppError(401, API_ERROR_CODES.UNAUTHORIZED, message);
+}
+
+/** Erstellt einen standardisierten 403-Fehler für fehlende Berechtigung */
+export function forbidden(message = 'Keine Berechtigung für diese Aktion.'): AppError {
+  return new AppError(403, API_ERROR_CODES.FORBIDDEN, message);
+}
+
 /**
  * Express Error-Middleware.
  * Signatur mit 4 Parametern ist wichtig — Express erkennt Error-Middlewares daran!

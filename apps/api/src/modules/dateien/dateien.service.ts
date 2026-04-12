@@ -10,6 +10,7 @@ import { prisma } from '@gutachten/database';
 import { notFound } from '@/middleware/error.middleware';
 
 export const dateienService = {
+  /** Speichert eine von Multer hochgeladene Datei in der DB. Wirft 404 wenn Gutachten nicht gefunden. */
   async upload(gutachtenId: string, file: Express.Multer.File, beschreibung: string | null) {
     const gutachten = await prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } });
     if (!gutachten) { throw notFound('Gutachten', gutachtenId); }
@@ -27,6 +28,7 @@ export const dateienService = {
     });
   },
 
+  /** Gibt alle Dateien eines Gutachtens zurück, neueste zuerst. */
   async list(gutachtenId: string) {
     return prisma.datei.findMany({
       where: { gutachtenId },
@@ -34,12 +36,14 @@ export const dateienService = {
     });
   },
 
+  /** Gibt eine einzelne Datei zurück. Stellt sicher dass sie zum Gutachten gehört. Wirft 404 wenn nicht gefunden. */
   async findById(gutachtenId: string, id: string) {
     const datei = await prisma.datei.findFirst({ where: { id, gutachtenId } });
     if (!datei) { throw notFound('Datei', id); }
     return datei;
   },
 
+  /** Löscht eine Datei aus DB und Dateisystem. Wirft 404 wenn nicht gefunden. */
   async delete(gutachtenId: string, id: string) {
     const existing = await prisma.datei.findFirst({ where: { id, gutachtenId }, select: { id: true, originalname: true, pfad: true } });
     if (!existing) { throw notFound('Datei', id); }
@@ -51,6 +55,7 @@ export const dateienService = {
     return { message: `Datei "${existing.originalname}" wurde gelöscht.` };
   },
 
+  /** Aktualisiert die Beschreibung einer Datei. Null löscht die Beschreibung. */
   async updateBeschreibung(gutachtenId: string, id: string, beschreibung: string | null) {
     const existing = await prisma.datei.findFirst({ where: { id, gutachtenId }, select: { id: true } });
     if (!existing) { throw notFound('Datei', id); }

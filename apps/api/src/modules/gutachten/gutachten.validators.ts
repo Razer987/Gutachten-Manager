@@ -27,13 +27,15 @@ const GutachtenStatusEnum = z.enum([
 export const CreateGutachtenSchema = z.object({
   titel: z
     .string()
+    .trim()
     .min(3, 'Titel muss mindestens 3 Zeichen lang sein')
     .max(200, 'Titel darf maximal 200 Zeichen lang sein'),
 
-  beschreibung: z.string().optional(),
+  beschreibung: z.string().trim().optional(),
 
   aktenzeichen: z
     .string()
+    .trim()
     .min(3, 'Aktenzeichen muss mindestens 3 Zeichen lang sein')
     .max(50)
     .optional(), // Optional — wird auto-generiert wenn nicht angegeben
@@ -42,15 +44,16 @@ export const CreateGutachtenSchema = z.object({
 
   frist: z
     .string()
+    .trim()
     .datetime({ message: 'Frist muss ein gültiges Datum sein (ISO 8601)' })
     .optional()
     .nullable(),
 
-  auftragsdatum: z.string().datetime().optional().nullable(),
+  auftragsdatum: z.string().trim().datetime().optional().nullable(),
 
-  kundeId: z.string().cuid({ message: 'Ungültige Kunden-ID' }).optional().nullable(),
+  kundeId: z.string().trim().cuid({ message: 'Ungültige Kunden-ID' }).optional().nullable(),
 
-  gutachterId: z.string().cuid({ message: 'Ungültige Gutachter-ID' }).optional().nullable(),
+  gutachterId: z.string().trim().cuid({ message: 'Ungültige Gutachter-ID' }).optional().nullable(),
 });
 
 /** Schema für Gutachten bearbeiten (PATCH /api/v1/gutachten/:id) */
@@ -59,12 +62,12 @@ export const UpdateGutachtenSchema = CreateGutachtenSchema.partial();
 /** Schema für Status-Änderung (PATCH /api/v1/gutachten/:id/status) */
 export const UpdateStatusSchema = z.object({
   status: GutachtenStatusEnum,
-  kommentar: z.string().max(500).optional(),
+  kommentar: z.string().trim().max(500).optional(),
 });
 
 /** Schema für Gutachten-Verknüpfung */
 export const VerknuepfungSchema = z.object({
-  gutachtenId: z.string().cuid({ message: 'Ungültige Gutachten-ID' }),
+  gutachtenId: z.string().trim().cuid({ message: 'Ungültige Gutachten-ID' }),
 });
 
 /** Schema für Filter-/Such-Parameter (GET /api/v1/gutachten) */
@@ -72,14 +75,14 @@ export const GutachtenListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   status: GutachtenStatusEnum.optional(),
-  kundeId: z.string().cuid().optional(),
-  gutachterId: z.string().cuid().optional(),
-  suche: z.string().max(200).optional(),
+  kundeId: z.string().trim().cuid().optional(),
+  gutachterId: z.string().trim().cuid().optional(),
+  suche: z.string().trim().max(200).optional(),
   sortBy: z.enum(['aktenzeichen', 'titel', 'status', 'frist', 'createdAt', 'updatedAt']).default('createdAt'),
   sortDir: z.enum(['asc', 'desc']).default('desc'),
   // Fristen-Filter
-  fristBis: z.string().datetime().optional(),
-  fristVon: z.string().datetime().optional(),
+  fristBis: z.string().trim().datetime().optional(),
+  fristVon: z.string().trim().datetime().optional(),
   // Nur überfällige anzeigen
   ueberfaellig: z.coerce.boolean().optional(),
 });

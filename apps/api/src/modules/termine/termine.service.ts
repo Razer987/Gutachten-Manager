@@ -8,6 +8,7 @@ import { notFound } from '@/middleware/error.middleware';
 import type { CreateTerminDto, TermineListQuery, UpdateTerminDto } from './termine.validators';
 
 export const termineService = {
+  /** Gibt alle Termine zurück, optional gefiltert nach Zeitraum oder Gutachten-ID. */
   async list(query: TermineListQuery) {
     const where: Prisma.TerminWhereInput = {};
 
@@ -29,6 +30,7 @@ export const termineService = {
     });
   },
 
+  /** Gibt einen einzelnen Termin zurück. Wirft 404 wenn nicht gefunden. */
   async findById(id: string) {
     const termin = await prisma.termin.findUnique({
       where: { id },
@@ -38,6 +40,7 @@ export const termineService = {
     return termin;
   },
 
+  /** Erstellt einen neuen Termin. ISO-8601-Datumsstrings werden in Date-Objekte konvertiert. */
   async create(dto: CreateTerminDto) {
     return prisma.termin.create({
       data: {
@@ -56,6 +59,7 @@ export const termineService = {
     });
   },
 
+  /** Aktualisiert einen Termin (nur übermittelte Felder). Wirft 404 wenn nicht gefunden. */
   async update(id: string, dto: UpdateTerminDto) {
     const existing = await prisma.termin.findUnique({ where: { id }, select: { id: true } });
     if (!existing) { throw notFound('Termin', id); }
@@ -77,6 +81,7 @@ export const termineService = {
     });
   },
 
+  /** Löscht einen Termin. Wirft 404 wenn nicht gefunden. */
   async delete(id: string) {
     const existing = await prisma.termin.findUnique({ where: { id }, select: { id: true } });
     if (!existing) { throw notFound('Termin', id); }
