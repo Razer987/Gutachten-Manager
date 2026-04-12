@@ -14,10 +14,10 @@ echo "[Entrypoint] NODE_ENV=${NODE_ENV:-production}"
 echo "[Entrypoint] Warte auf Datenbank..."
 
 RETRIES=30
-until node_modules/.bin/prisma db execute \
+until printf 'SELECT 1;' | node_modules/.bin/prisma db execute \
   --stdin \
   --schema packages/database/prisma/schema.prisma \
-  <<< "SELECT 1;" > /dev/null 2>&1; do
+  > /dev/null 2>&1; do
   RETRIES=$((RETRIES - 1))
   if [ "$RETRIES" -le 0 ]; then
     echo "[Entrypoint] FEHLER: Datenbank nach 30 Versuchen nicht erreichbar."

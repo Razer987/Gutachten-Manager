@@ -1,3 +1,5 @@
+'use client';
+
 // Alle Dashboard-Seiten dynamisch rendern (keine statische Generierung)
 // noetig weil Seiten API-Calls und useSearchParams verwenden
 export const dynamic = 'force-dynamic';
@@ -9,8 +11,6 @@ export const dynamic = 'force-dynamic';
  * Enthält: TopBar (oben) + Sidebar (links) + Hauptinhalt (rechts)
  * Dieses Layout gilt für alle Seiten unter (dashboard)/.
  */
-
-'use client';
 
 import React, { useState } from 'react';
 
