@@ -1,11 +1,14 @@
+'use client';
+
+// Next.js 15: useSearchParams braucht Suspense-Grenze + force-dynamic auf Seitenebene
+export const dynamic = 'force-dynamic';
+
 /**
  * @file apps/web/src/app/(dashboard)/suche/page.tsx
  * @description Volltextsuche über Gutachten, Kunden und Gutachter.
  */
 
-'use client';
-
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import SearchIcon from '@mui/icons-material/Search';
 import Avatar from '@mui/material/Avatar';
@@ -41,7 +44,9 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVIERT: 'Archiviert',
 };
 
-export default function SuchePage(): React.JSX.Element {
+// ─── Innere Komponente (nutzt useSearchParams — muss in <Suspense> liegen) ───
+
+function SucheInhalt(): React.JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQ = searchParams.get('q') ?? '';
@@ -229,5 +234,21 @@ export default function SuchePage(): React.JSX.Element {
         </Paper>
       )}
     </Box>
+  );
+}
+
+// ─── Äußere Seite: Suspense-Wrapper für useSearchParams ──────────────────────
+
+export default function SuchePage(): React.JSX.Element {
+  return (
+    <Suspense
+      fallback={
+        <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
+          <CircularProgress />
+        </Box>
+      }
+    >
+      <SucheInhalt />
+    </Suspense>
   );
 }
