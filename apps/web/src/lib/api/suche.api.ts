@@ -11,21 +11,19 @@ export interface SucheResult {
     aktenzeichen: string;
     titel: string;
     status: string;
-    highlight: string;
   }>;
   kunden: Array<{
     id: string;
     vorname: string | null;
     nachname: string;
+    firma: string | null;
     email: string | null;
-    highlight: string;
   }>;
   gutachter: Array<{
     id: string;
     vorname: string;
     nachname: string;
     email: string | null;
-    highlight: string;
   }>;
   total: number;
 }

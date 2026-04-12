@@ -30,18 +30,24 @@ import { useSearchParams, useRouter } from 'next/navigation';
 
 import { sucheApi, type SucheResult } from '@/lib/api/suche.api';
 
-const STATUS_COLORS: Record<string, 'default' | 'primary' | 'success' | 'warning' | 'error'> = {
-  ENTWURF: 'default',
-  IN_BEARBEITUNG: 'primary',
-  ABGESCHLOSSEN: 'success',
-  ARCHIVIERT: 'warning',
+const STATUS_COLORS: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
+  AUFGENOMMEN: 'default',
+  BEAUFTRAGT: 'info',
+  BESICHTIGUNG: 'primary',
+  ENTWURF: 'warning',
+  FREIGABE: 'secondary',
+  FERTIG: 'success',
+  ARCHIV: 'default',
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  AUFGENOMMEN: 'Aufgenommen',
+  BEAUFTRAGT: 'Beauftragt',
+  BESICHTIGUNG: 'Besichtigung',
   ENTWURF: 'Entwurf',
-  IN_BEARBEITUNG: 'In Bearbeitung',
-  ABGESCHLOSSEN: 'Abgeschlossen',
-  ARCHIVIERT: 'Archiviert',
+  FREIGABE: 'Freigabe',
+  FERTIG: 'Fertig',
+  ARCHIV: 'Archiv',
 };
 
 // ─── Innere Komponente (nutzt useSearchParams — muss in <Suspense> liegen) ───

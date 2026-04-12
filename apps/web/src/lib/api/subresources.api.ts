@@ -227,6 +227,8 @@ export const subresourcesApi = {
       apiClient.get<Fahrzeug[]>(`/gutachten/${gutachtenId}/fahrzeuge`),
     create: (gutachtenId: string, data: CreateFahrzeugInput): Promise<Fahrzeug> =>
       apiClient.post<Fahrzeug>(`/gutachten/${gutachtenId}/fahrzeuge`, data),
+    update: (gutachtenId: string, id: string, data: Partial<CreateFahrzeugInput>): Promise<Fahrzeug> =>
+      apiClient.patch<Fahrzeug>(`/gutachten/${gutachtenId}/fahrzeuge/${id}`, data),
     delete: (gutachtenId: string, id: string): Promise<{ message: string }> =>
       apiClient.delete(`/gutachten/${gutachtenId}/fahrzeuge/${id}`),
   },
@@ -236,6 +238,8 @@ export const subresourcesApi = {
       apiClient.get<Person[]>(`/gutachten/${gutachtenId}/personen`),
     create: (gutachtenId: string, data: CreatePersonInput): Promise<Person> =>
       apiClient.post<Person>(`/gutachten/${gutachtenId}/personen`, data),
+    update: (gutachtenId: string, id: string, data: Partial<CreatePersonInput>): Promise<Person> =>
+      apiClient.patch<Person>(`/gutachten/${gutachtenId}/personen/${id}`, data),
     delete: (gutachtenId: string, id: string): Promise<{ message: string }> =>
       apiClient.delete(`/gutachten/${gutachtenId}/personen/${id}`),
   },
@@ -245,6 +249,8 @@ export const subresourcesApi = {
       apiClient.get<SchadenspostenSumme>(`/gutachten/${gutachtenId}/schaden`),
     create: (gutachtenId: string, data: CreateSchadenspostenInput): Promise<Schadensposten> =>
       apiClient.post<Schadensposten>(`/gutachten/${gutachtenId}/schaden`, data),
+    update: (gutachtenId: string, id: string, data: Partial<CreateSchadenspostenInput>): Promise<Schadensposten> =>
+      apiClient.patch<Schadensposten>(`/gutachten/${gutachtenId}/schaden/${id}`, data),
     delete: (gutachtenId: string, id: string): Promise<{ message: string }> =>
       apiClient.delete(`/gutachten/${gutachtenId}/schaden/${id}`),
   },
@@ -254,6 +260,8 @@ export const subresourcesApi = {
       apiClient.get<Notiz[]>(`/gutachten/${gutachtenId}/notizen`),
     create: (gutachtenId: string, data: CreateNotizInput): Promise<Notiz> =>
       apiClient.post<Notiz>(`/gutachten/${gutachtenId}/notizen`, data),
+    update: (gutachtenId: string, id: string, data: CreateNotizInput): Promise<Notiz> =>
+      apiClient.patch<Notiz>(`/gutachten/${gutachtenId}/notizen/${id}`, data),
     delete: (gutachtenId: string, id: string): Promise<{ message: string }> =>
       apiClient.delete(`/gutachten/${gutachtenId}/notizen/${id}`),
   },

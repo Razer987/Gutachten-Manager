@@ -47,6 +47,7 @@ export const sucheService = {
       }),
     ]);
 
-    return { gutachten, kunden, gutachter };
+    const total = gutachten.length + kunden.length + gutachter.length;
+    return { gutachten, kunden, gutachter, total };
   },
 };

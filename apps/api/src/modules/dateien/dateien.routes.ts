@@ -44,6 +44,7 @@ const router = Router({ mergeParams: true });
 
 router.get('/', asyncHandler(dateienController.list));
 router.post('/', upload.single('datei'), asyncHandler(dateienController.upload));
+router.get('/:id/download', asyncHandler(dateienController.download));
 router.get('/:id', asyncHandler(dateienController.findById));
 router.patch('/:id', asyncHandler(dateienController.updateBeschreibung));
 router.delete('/:id', asyncHandler(dateienController.delete));

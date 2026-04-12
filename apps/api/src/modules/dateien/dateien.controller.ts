@@ -1,6 +1,8 @@
 /**
  * @file apps/api/src/modules/dateien/dateien.controller.ts
  */
+import path from 'path';
+
 import { z } from 'zod';
 import type { Request, Response } from 'express';
 
@@ -34,6 +36,11 @@ export const dateienController = {
   async delete(req: Request, res: Response) {
     const result = await dateienService.delete(req.params.gutachtenId, req.params.id);
     res.json({ success: true, data: result });
+  },
+
+  async download(req: Request, res: Response) {
+    const datei = await dateienService.findById(req.params.gutachtenId, req.params.id);
+    res.download(path.resolve(datei.pfad), datei.originalname);
   },
 
   async updateBeschreibung(req: Request, res: Response) {
