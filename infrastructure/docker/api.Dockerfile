@@ -36,6 +36,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# postgresql-client für pg_dump (Backup-Service)
+RUN apk add --no-cache postgresql-client
+
 RUN addgroup --system --gid 1001 nodejs \
   && adduser  --system --uid 1001 api
 

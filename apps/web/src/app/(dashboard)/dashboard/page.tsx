@@ -1,11 +1,11 @@
-/**
- * @file apps/web/src/app/(dashboard)/dashboard/page.tsx
- * @description Dashboard mit Statistiken und Übersichten.
- */
-
 'use client';
 
-import React, { useEffect, useState } from 'react';
+/**
+ * @file apps/web/src/app/(dashboard)/dashboard/page.tsx
+ * @description Dashboard mit Statistiken und Übersichten (React Query).
+ */
+
+import React from 'react';
 
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -22,8 +22,9 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 import { dashboardApi, type DashboardStats, type MonatsuebersichtItem } from '@/lib/api/dashboard.api';
 
@@ -75,25 +76,28 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_CHART_COLORS = ['#1565C0', '#1976d2', '#42a5f5', '#90caf9', '#FF6F00', '#4caf50', '#9e9e9e'];
 
 export default function DashboardPage(): React.JSX.Element {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [monatsDaten, setMonatsDaten] = useState<MonatsuebersichtItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+  } = useQuery<DashboardStats>({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => dashboardApi.getStats(),
+    staleTime: 2 * 60 * 1000, // 2 Minuten (passend zum Server-Cache-TTL)
+  });
 
-  useEffect(() => {
-    Promise.all([
-      dashboardApi.getStats(),
-      dashboardApi.getMonatsuebersicht(),
-    ])
-      .then(([s, m]) => {
-        setStats(s);
-        setMonatsDaten(m);
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const {
+    data: monatsDaten = [],
+    isLoading: monatsLoading,
+  } = useQuery<MonatsuebersichtItem[]>({
+    queryKey: ['dashboard-monatsuebersicht'],
+    queryFn: () => dashboardApi.getMonatsuebersicht(),
+    staleTime: 10 * 60 * 1000, // 10 Minuten (passend zum Server-Cache-TTL)
+  });
 
-  if (loading) {
+  const isLoading = statsLoading || monatsLoading;
+
+  if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
         <CircularProgress />
@@ -101,8 +105,12 @@ export default function DashboardPage(): React.JSX.Element {
     );
   }
 
-  if (error) {
-    return <Typography color="error">{error}</Typography>;
+  if (statsError) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Typography color="error">Fehler beim Laden der Dashboard-Daten.</Typography>
+      </Box>
+    );
   }
 
   const statusChartData = stats
@@ -181,7 +189,6 @@ export default function DashboardPage(): React.JSX.Element {
                         name === 'erstellt' ? 'Erstellt' : 'Fertig',
                       ]}
                     />
-                    <Legend formatter={(v) => v === 'erstellt' ? 'Erstellt' : 'Fertig'} />
                     <Bar dataKey="erstellt" fill="#1565C0" name="erstellt" />
                     <Bar dataKey="fertig" fill="#4caf50" name="fertig" />
                   </BarChart>

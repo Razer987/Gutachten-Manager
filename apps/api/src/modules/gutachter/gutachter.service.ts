@@ -4,7 +4,7 @@
 import { prisma, type Prisma } from '@gutachten/database';
 
 import { createPaginationMeta, parsePagination } from '@/lib/pagination';
-import { notFound } from '@/middleware/error.middleware';
+import { conflict, notFound } from '@/middleware/error.middleware';
 
 import type { CreateGutachterDto, GutachterListQuery, UpdateGutachterDto } from './gutachter.validators';
 
@@ -63,10 +63,37 @@ export const gutachterService = {
     return prisma.gutachter.update({ where: { id }, data: dto });
   },
 
-  /** Löscht einen Gutachter. Wirft 404 wenn nicht gefunden. */
+  /**
+   * Löscht einen Gutachter.
+   *
+   * Wirft 409 wenn der Gutachter noch aktive (nicht archivierte) Gutachten hat.
+   * Archivierte/fertige Gutachten sind kein Hindernis — deren gutachterId wird
+   * auf NULL gesetzt (onDelete: SetNull im Schema).
+   */
   async delete(id: string) {
-    const existing = await prisma.gutachter.findUnique({ where: { id }, select: { id: true, nachname: true } });
+    const existing = await prisma.gutachter.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nachname: true,
+        _count: {
+          select: {
+            gutachten: {
+              where: { status: { notIn: ['FERTIG', 'ARCHIV'] } },
+            },
+          },
+        },
+      },
+    });
     if (!existing) { throw notFound('Gutachter', id); }
+
+    if (existing._count.gutachten > 0) {
+      throw conflict(
+        `Gutachter "${existing.nachname}" hat noch ${existing._count.gutachten} aktive Gutachten. ` +
+        `Bitte alle Gutachten abschließen oder archivieren, bevor der Gutachter gelöscht werden kann.`,
+      );
+    }
+
     await prisma.gutachter.delete({ where: { id } });
     return { message: `Gutachter "${existing.nachname}" wurde gelöscht.` };
   },

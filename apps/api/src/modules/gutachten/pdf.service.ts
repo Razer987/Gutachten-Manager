@@ -341,6 +341,17 @@ export async function erstelleGutachtenPdf(
       );
   }
 
-  doc.end();
+  // FIX: doc.end() startet den Stream, gibt aber keine Promise zurück.
+  // Ohne await kann ein Fehler (z.B. I/O-Fehler in pdfkit) unhandled bleiben
+  // und den Node-Prozess zum Absturz bringen. Wir warten explizit auf das
+  // 'finish'-Ereignis der HTTP-Response und leiten 'error'-Events als
+  // rejected Promise weiter, sodass der asyncHandler den Fehler fangen kann.
+  await new Promise<void>((resolve, reject) => {
+    doc.on('error', reject);
+    res.on('finish', resolve);
+    res.on('error', reject);
+    doc.end();
+  });
+
   logger.info(`PDF erstellt: ${gutachten.aktenzeichen}`);
 }

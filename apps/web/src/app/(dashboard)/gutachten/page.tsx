@@ -1,9 +1,9 @@
+'use client';
+
 /**
  * @file apps/web/src/app/(dashboard)/gutachten/page.tsx
- * @description Gutachten-Listenansicht.
+ * @description Gutachten-Listenansicht mit React Query.
  */
-
-'use client';
 
 import React, { useState } from 'react';
 
@@ -24,6 +24,7 @@ import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -54,18 +55,25 @@ export default function GutachtenListePage(): React.JSX.Element {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [suche, setSuche] = useState('');
-  const [data, setData] = React.useState<Awaited<ReturnType<typeof gutachtenApi.list>> | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    setLoading(true);
-    gutachtenApi
-      .list({ page: page + 1, pageSize: rowsPerPage, suche: suche || undefined })
-      .then(setData)
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [page, rowsPerPage, suche]);
+  /**
+   * useQuery ersetzt useState + useEffect:
+   * - Automatisches Caching (kein doppeltes Laden bei Rückkehr zur Seite)
+   * - Automatische Wiederholung bei Netzwerkfehler
+   * - isLoading / isError aus einer Quelle — kein inkonsistenter State
+   * - queryKey steuert wann neu geladen wird
+   */
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['gutachten', page, rowsPerPage, suche],
+    queryFn: () =>
+      gutachtenApi.list({
+        page: page + 1,
+        pageSize: rowsPerPage,
+        suche: suche || undefined,
+      }),
+    // Seite bleibt sichtbar (stale data) während neue Daten geladen werden
+    placeholderData: (prev) => prev,
+  });
 
   return (
     <Box>
@@ -101,13 +109,15 @@ export default function GutachtenListePage(): React.JSX.Element {
       </Paper>
 
       <TableContainer component={Paper}>
-        {loading ? (
+        {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : error ? (
+        ) : isError ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography color="error">{error}</Typography>
+            <Typography color="error">
+              {error instanceof Error ? error.message : 'Fehler beim Laden der Gutachten.'}
+            </Typography>
           </Box>
         ) : (
           <>
@@ -177,7 +187,10 @@ export default function GutachtenListePage(): React.JSX.Element {
               page={page}
               onPageChange={(_, newPage) => setPage(newPage)}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
               rowsPerPageOptions={[10, 20, 50]}
               labelRowsPerPage="Zeilen pro Seite:"
               labelDisplayedRows={({ from, to, count }) => `${from}–${to} von ${count}`}

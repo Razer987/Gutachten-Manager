@@ -12,7 +12,7 @@
  * Kein HTTP-spezifischer Code (Request, Response) im Service!
  */
 
-import { prisma, type Prisma } from '@gutachten/database';
+import { prisma, type Prisma, Prisma as PrismaNamespace } from '@gutachten/database';
 
 import { generiereAktenzeichen } from '@/lib/aktenzeichen';
 import {
@@ -134,51 +134,75 @@ export const gutachtenService = {
   },
 
   /**
-   * Neues Gutachten erstellen
+   * Neues Gutachten erstellen.
+   *
+   * Beim auto-generierten Aktenzeichen wird die Erstellung bei einem
+   * Unique-Constraint-Fehler (P2002) bis zu 3-mal wiederholt, um die
+   * Race-Condition zwischen parallelen Requests zu beheben.
    */
   async create(dto: CreateGutachtenDto) {
-    // Aktenzeichen: manuell oder auto-generiert
-    let aktenzeichen = dto.aktenzeichen?.trim();
+    const manuellesAktenzeichen = dto.aktenzeichen?.trim();
 
-    if (!aktenzeichen) {
-      aktenzeichen = await generiereAktenzeichen();
-    } else {
-      // Prüfen ob Aktenzeichen bereits vergeben
+    // Manuell eingegebenes Aktenzeichen: Duplikat vorab prüfen
+    if (manuellesAktenzeichen) {
       const existing = await prisma.gutachten.findUnique({
-        where: { aktenzeichen },
+        where: { aktenzeichen: manuellesAktenzeichen },
         select: { id: true },
       });
       if (existing) {
-        throw conflict(`Aktenzeichen "${aktenzeichen}" ist bereits vergeben.`);
+        throw conflict(`Aktenzeichen "${manuellesAktenzeichen}" ist bereits vergeben.`);
       }
     }
 
-    // Gutachten erstellen
-    const gutachten = await prisma.gutachten.create({
-      data: {
-        aktenzeichen,
-        titel: dto.titel,
-        beschreibung: dto.beschreibung,
-        status: dto.status,
-        frist: dto.frist ? new Date(dto.frist) : null,
-        auftragsdatum: dto.auftragsdatum ? new Date(dto.auftragsdatum) : null,
-        kundeId: dto.kundeId ?? null,
-        gutachterId: dto.gutachterId ?? null,
-      },
-      select: GUTACHTEN_DETAIL_SELECT,
-    });
+    const MAX_VERSUCHE = 3;
 
-    // Audit-Log-Eintrag
-    await prisma.auditLog.create({
-      data: {
-        gutachtenId: gutachten.id,
-        aktion: 'ERSTELLT',
-        bearbeiter: 'System',
-        beschreibung: `Gutachten ${aktenzeichen} wurde angelegt`,
-      },
-    });
+    for (let versuch = 1; versuch <= MAX_VERSUCHE; versuch++) {
+      // Auto-Generierung: bei jedem Versuch neu abrufen (Retry bekommt höhere Nummer)
+      const aktenzeichen = manuellesAktenzeichen ?? await generiereAktenzeichen();
 
-    return gutachten;
+      try {
+        const gutachten = await prisma.gutachten.create({
+          data: {
+            aktenzeichen,
+            titel: dto.titel,
+            beschreibung: dto.beschreibung,
+            status: dto.status,
+            frist: dto.frist ? new Date(dto.frist) : null,
+            auftragsdatum: dto.auftragsdatum ? new Date(dto.auftragsdatum) : null,
+            kundeId: dto.kundeId ?? null,
+            gutachterId: dto.gutachterId ?? null,
+          },
+          select: GUTACHTEN_DETAIL_SELECT,
+        });
+
+        // Audit-Log-Eintrag
+        await prisma.auditLog.create({
+          data: {
+            gutachtenId: gutachten.id,
+            aktion: 'ERSTELLT',
+            bearbeiter: 'System',
+            beschreibung: `Gutachten ${aktenzeichen} wurde angelegt`,
+          },
+        });
+
+        return gutachten;
+      } catch (err) {
+        // P2002 auf aktenzeichen-Feld → Kollision zweier paralleler Requests.
+        // Nur bei auto-generierten Aktenzeichen wiederholen.
+        if (
+          !manuellesAktenzeichen &&
+          err instanceof PrismaNamespace.PrismaClientKnownRequestError &&
+          err.code === 'P2002' &&
+          versuch < MAX_VERSUCHE
+        ) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    // Sollte durch das return im try-Block nie erreicht werden
+    throw conflict('Aktenzeichen konnte nach mehreren Versuchen nicht vergeben werden.');
   },
 
   /**

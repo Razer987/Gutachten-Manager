@@ -285,7 +285,7 @@ export const subresourcesApi = {
     delete: (gutachtenId: string, id: string): Promise<{ message: string }> =>
       apiClient.delete(`/gutachten/${gutachtenId}/dateien/${id}`),
     downloadUrl: (gutachtenId: string, id: string): string =>
-      `${process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000/api/v1'}/gutachten/${gutachtenId}/dateien/${id}/download`,
+      `${process.env['NEXT_PUBLIC_API_URL'] ?? '/api/v1'}/gutachten/${gutachtenId}/dateien/${id}/download`,
   },
 
   audit: {
