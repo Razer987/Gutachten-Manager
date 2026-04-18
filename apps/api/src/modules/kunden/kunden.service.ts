@@ -4,7 +4,7 @@
 import { prisma, type Prisma } from '@gutachten/database';
 
 import { createPaginationMeta, parsePagination } from '@/lib/pagination';
-import { notFound } from '@/middleware/error.middleware';
+import { conflict, notFound } from '@/middleware/error.middleware';
 
 import type { CreateKundeDto, KontaktHistorieDto, KundenListQuery, UpdateKundeDto } from './kunden.validators';
 
@@ -27,6 +27,7 @@ const KUNDE_SELECT = {
 } satisfies Prisma.KundeSelect;
 
 export const kundenService = {
+  /** Gibt eine paginierte, durchsuchbare Liste aller Kunden zurück. */
   async list(query: KundenListQuery) {
     const pagination = parsePagination(query.page, query.pageSize);
     const where: Prisma.KundeWhereInput = {};
@@ -54,6 +55,7 @@ export const kundenService = {
     return { kunden, meta: createPaginationMeta(total, pagination) };
   },
 
+  /** Gibt einen Kunden inkl. Kontakthistorie und verknüpften Gutachten zurück. Wirft 404 wenn nicht gefunden. */
   async findById(id: string) {
     const kunde = await prisma.kunde.findUnique({
       where: { id },
@@ -70,23 +72,54 @@ export const kundenService = {
     return kunde;
   },
 
+  /** Erstellt einen neuen Kunden und gibt ihn zurück. */
   async create(dto: CreateKundeDto) {
     return prisma.kunde.create({ data: dto, select: KUNDE_SELECT });
   },
 
+  /** Aktualisiert einen bestehenden Kunden. Wirft 404 wenn nicht gefunden. */
   async update(id: string, dto: UpdateKundeDto) {
     const existing = await prisma.kunde.findUnique({ where: { id }, select: { id: true } });
     if (!existing) { throw notFound('Kunde', id); }
     return prisma.kunde.update({ where: { id }, data: dto, select: KUNDE_SELECT });
   },
 
+  /**
+   * Löscht einen Kunden.
+   *
+   * Wirft 409 wenn der Kunde noch aktive (nicht archivierte) Gutachten hat.
+   * Archivierte/fertige Gutachten sind kein Hindernis — deren kundeId wird
+   * auf NULL gesetzt (onDelete: SetNull im Schema).
+   */
   async delete(id: string) {
-    const existing = await prisma.kunde.findUnique({ where: { id }, select: { id: true, nachname: true } });
+    const existing = await prisma.kunde.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nachname: true,
+        _count: {
+          select: {
+            gutachten: {
+              where: { status: { notIn: ['FERTIG', 'ARCHIV'] } },
+            },
+          },
+        },
+      },
+    });
     if (!existing) { throw notFound('Kunde', id); }
+
+    if (existing._count.gutachten > 0) {
+      throw conflict(
+        `Kunde "${existing.nachname}" hat noch ${existing._count.gutachten} aktive Gutachten. ` +
+        `Bitte alle Gutachten abschließen oder archivieren, bevor der Kunde gelöscht werden kann.`,
+      );
+    }
+
     await prisma.kunde.delete({ where: { id } });
     return { message: `Kunde "${existing.nachname}" wurde gelöscht.` };
   },
 
+  /** Fügt einen neuen Kontakthistorie-Eintrag zu einem Kunden hinzu. */
   async addKontakt(kundeId: string, dto: KontaktHistorieDto) {
     const existing = await prisma.kunde.findUnique({ where: { id: kundeId }, select: { id: true } });
     if (!existing) { throw notFound('Kunde', kundeId); }

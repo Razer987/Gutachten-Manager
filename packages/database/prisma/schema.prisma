@@ -123,11 +123,13 @@ model Gutachten {
 
   /// Auftraggeber (Kunde)
   kundeId        String?
-  kunde          Kunde?          @relation(fields: [kundeId], references: [id])
+  /// onDelete: SetNull — Kunde kann gelöscht werden; kundeId wird dann NULL
+  kunde          Kunde?          @relation(fields: [kundeId], references: [id], onDelete: SetNull)
 
   /// Zuständiger Gutachter
   gutachterId    String?
-  gutachter      Gutachter?      @relation(fields: [gutachterId], references: [id])
+  /// onDelete: SetNull — Gutachter kann gelöscht werden; gutachterId wird dann NULL
+  gutachter      Gutachter?      @relation(fields: [gutachterId], references: [id], onDelete: SetNull)
 
   /// Verknüpfte Gutachten (z.B. Folge-Gutachten)
   verwandteGutachten    Gutachten[]   @relation("GutachtenVerknuepfung")
@@ -168,6 +170,7 @@ model Gutachten {
   @@index([kundeId])
   @@index([gutachterId])
   @@index([aktenzeichen])
+  @@index([titel])
   @@map("gutachten")
 }
 
@@ -211,6 +214,7 @@ model Kunde {
   updatedAt      DateTime    @updatedAt
 
   @@index([nachname])
+  @@index([vorname])
   @@index([email])
   @@map("kunden")
 }
@@ -248,6 +252,7 @@ model Gutachter {
   updatedAt  DateTime    @updatedAt
 
   @@index([nachname])
+  @@index([vorname])
   @@map("gutachter")
 }
 

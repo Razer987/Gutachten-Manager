@@ -4,8 +4,8 @@
 import { z } from 'zod';
 
 export const CreateNotizSchema = z.object({
-  inhalt: z.string().min(1, 'Inhalt ist erforderlich'),
-  autor: z.string().max(100).optional().nullable(),
+  inhalt: z.string().trim().min(1, 'Inhalt ist erforderlich'),
+  autor: z.string().trim().max(100).optional().nullable(),
 });
 
 export const UpdateNotizSchema = CreateNotizSchema.partial();

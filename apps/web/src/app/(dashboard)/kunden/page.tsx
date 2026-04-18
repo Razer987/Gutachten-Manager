@@ -1,11 +1,11 @@
-/**
- * @file apps/web/src/app/(dashboard)/kunden/page.tsx
- * @description Kunden-Listenansicht.
- */
-
 'use client';
 
-import React, { useEffect, useState } from 'react';
+/**
+ * @file apps/web/src/app/(dashboard)/kunden/page.tsx
+ * @description Kunden-Listenansicht mit React Query.
+ */
+
+import React, { useState } from 'react';
 
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
@@ -23,6 +23,7 @@ import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -33,18 +34,13 @@ export default function KundenListePage(): React.JSX.Element {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [suche, setSuche] = useState('');
-  const [data, setData] = useState<KundenListResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    kundenApi
-      .list({ page: page + 1, pageSize: rowsPerPage, suche: suche || undefined })
-      .then(setData)
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [page, rowsPerPage, suche]);
+  const { data, isLoading, isError, error } = useQuery<KundenListResponse>({
+    queryKey: ['kunden', page, rowsPerPage, suche],
+    queryFn: () =>
+      kundenApi.list({ page: page + 1, pageSize: rowsPerPage, suche: suche || undefined }),
+    placeholderData: (prev) => prev,
+  });
 
   return (
     <Box>
@@ -80,13 +76,15 @@ export default function KundenListePage(): React.JSX.Element {
       </Paper>
 
       <TableContainer component={Paper}>
-        {loading ? (
+        {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
           </Box>
-        ) : error ? (
+        ) : isError ? (
           <Box sx={{ p: 4 }}>
-            <Typography color="error">{error}</Typography>
+            <Typography color="error">
+              {error instanceof Error ? error.message : 'Fehler beim Laden der Kunden.'}
+            </Typography>
           </Box>
         ) : (
           <>
@@ -134,7 +132,10 @@ export default function KundenListePage(): React.JSX.Element {
               page={page}
               onPageChange={(_, newPage) => setPage(newPage)}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
               rowsPerPageOptions={[10, 20, 50]}
               labelRowsPerPage="Zeilen pro Seite:"
               labelDisplayedRows={({ from, to, count }) => `${from}–${to} von ${count}`}

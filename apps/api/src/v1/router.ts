@@ -12,6 +12,7 @@
 import { Router } from 'express';
 
 import { env } from '@/config/env';
+import { requireAdmin, requireAuth } from '@/middleware/auth.middleware';
 import { adminRouter } from '@/modules/admin/admin.routes';
 import { aufgabenRouter } from '@/modules/aufgaben/aufgaben.routes';
 import { auditRouter } from '@/modules/audit/audit.routes';
@@ -81,6 +82,13 @@ router.get('/', (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Auth-Middleware — Alle nachfolgenden Routen erfordern Authentifizierung
+// ---------------------------------------------------------------------------
+// PLATZHALTER: Befüllt req.user; in Produktion JWT-Token validieren.
+// Ausgenommen: /health und / (Übersicht) — werden vor requireAuth registriert.
+router.use(requireAuth);
+
+// ---------------------------------------------------------------------------
 // Feature-Module
 // ---------------------------------------------------------------------------
 
@@ -92,7 +100,7 @@ router.use('/termine', termineRouter);
 router.use('/kalender', termineRouter);
 router.use('/dashboard', dashboardRouter);
 router.use('/suche', sucheRouter);
-router.use('/admin', adminRouter);
+router.use('/admin', requireAdmin, adminRouter);
 
 // Sub-Ressourcen für Gutachten
 router.use('/gutachten/:gutachtenId/unfall', unfallRouter);

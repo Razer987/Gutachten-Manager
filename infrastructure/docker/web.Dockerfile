@@ -18,7 +18,7 @@ COPY apps/web/ ./apps/web/
 # Abhaengigkeiten installieren
 RUN pnpm install --no-frozen-lockfile
 
-ARG NEXT_PUBLIC_API_URL=http://localhost/api/v1
+ARG NEXT_PUBLIC_API_URL=/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
