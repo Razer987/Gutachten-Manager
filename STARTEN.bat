@@ -35,7 +35,7 @@ echo.
 
 :: 2. Docker pruefen
 echo  [2/5] Pruefe Docker Desktop...
-docker info >/dev/null 2>&1
+docker info >NUL 2>&1
 if %errorlevel% equ 0 goto DOCKER_OK
 
 echo  [2/5] Docker nicht bereit - versuche zu starten...
@@ -52,7 +52,7 @@ if %DOCKER_WAIT% geq 120 (
 echo  [2/5] Warte auf Docker... (%DOCKER_WAIT%s / 120s)
 timeout /t 5 /nobreak >NUL
 set /a DOCKER_WAIT+=5
-docker info >/dev/null 2>&1
+docker info >NUL 2>&1
 if %errorlevel% neq 0 goto WARTE_DOCKER
 
 :DOCKER_OK
@@ -80,7 +80,7 @@ echo  [4/5] Baue Images und starte Container...
 echo        Erster Start: 5-15 Minuten / Folgestarts: 1-2 Minuten
 echo.
 echo  Raeume alte Container auf (falls vorhanden)...
-for /f "tokens=*" %%i in ('docker ps -aq --filter name^=gutachten') do docker rm -f %%i >/dev/null 2>&1
+for /f "tokens=*" %%i in ('docker ps -aq --filter name^=gutachten') do docker rm -f %%i >NUL 2>&1
 echo.
 echo [%TIME%] docker compose up --build -d >> "%LOG%"
 docker compose up --build -d
@@ -108,7 +108,7 @@ set /a VERSUCHE=0
 :HEALTH_CHECK
 set /a VERSUCHE+=1
 if %VERSUCHE% gtr 80 goto TIMEOUT
-powershell -NonInteractive -Command "try{$r=(Invoke-WebRequest 'http://localhost/api/v1/health' -UseBasicParsing -TimeoutSec 3 -EA Stop).StatusCode;exit ($r -ne 200)}catch{exit 1}" >/dev/null 2>&1
+powershell -NonInteractive -Command "try{$r=(Invoke-WebRequest 'http://localhost/api/v1/health' -UseBasicParsing -TimeoutSec 3 -EA Stop).StatusCode;exit ($r -ne 200)}catch{exit 1}" >NUL 2>&1
 if %errorlevel% equ 0 goto BEREIT
 <nul set /p "=  Versuch !VERSUCHE!/80 "
 echo.
