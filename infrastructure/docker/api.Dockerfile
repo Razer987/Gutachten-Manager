@@ -49,10 +49,11 @@ COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 
 # Workspace-Pakete (kompiliert)
-COPY --from=builder /app/packages/database/dist        ./packages/database/dist
-COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
-COPY --from=builder /app/packages/shared/dist          ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json   ./packages/shared/package.json
+COPY --from=builder /app/packages/database/dist         ./packages/database/dist
+COPY --from=builder /app/packages/database/package.json  ./packages/database/package.json
+COPY --from=builder /app/packages/database/node_modules  ./packages/database/node_modules
+COPY --from=builder /app/packages/shared/dist           ./packages/shared/dist
+COPY --from=builder /app/packages/shared/package.json    ./packages/shared/package.json
 
 # Prisma-Schema fuer Migration
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma

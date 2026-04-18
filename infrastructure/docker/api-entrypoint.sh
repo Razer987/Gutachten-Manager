@@ -17,14 +17,16 @@ echo "[Entrypoint] ============================================================"
 # -----------------------------------------------------------------------
 # Schema anwenden
 # prisma db push legt alle Tabellen an / passt sie an.
-# --accept-data-loss  erlaubt nicht-rueckwaertskompatible Aenderungen
-# --skip-generate     Prisma-Client wurde bereits im Build-Schritt erzeugt
+# --skip-generate  Prisma-Client wurde bereits im Build-Schritt erzeugt.
+#
+# Pfad: packages/database/node_modules/.bin/prisma
+# Begruendung: pnpm hoistet Dev-Binaries von Sub-Packages nicht in das
+# Root-node_modules/.bin/. Der explizite Pfad ist zuverlaessig.
 # -----------------------------------------------------------------------
 echo "[Entrypoint] Wende Datenbankschema an (prisma db push)..."
 
-node_modules/.bin/prisma db push \
+packages/database/node_modules/.bin/prisma db push \
   --schema packages/database/prisma/schema.prisma \
-  --accept-data-loss \
   --skip-generate
 
 echo "[Entrypoint] Schema erfolgreich angewendet."
