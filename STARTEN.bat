@@ -93,6 +93,9 @@ echo  [4/5] Baue Images und starte Container...
 echo        Erster Start: 5-15 Minuten
 echo        Folgestarts:  1-2 Minuten
 echo.
+echo  [4/5] Raeume alte Container auf (falls vorhanden)...
+docker rm -f gutachten_db gutachten_api gutachten_web gutachten_nginx >nul 2>&1
+echo.
 echo [%TIME%] docker compose up --build -d >> "%LOG%"
 
 docker compose up --build -d

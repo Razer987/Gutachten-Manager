@@ -10,6 +10,9 @@
 # Status:   docker compose ps
 # =============================================================================
 
+# Fixer Projektname — unabhaengig vom Ordnernamen
+name: gutachten-manager
+
 services:
 
   # ---------------------------------------------------------------------------
