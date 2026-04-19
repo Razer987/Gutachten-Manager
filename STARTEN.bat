@@ -35,11 +35,11 @@ echo.
 
 :: 2. Docker pruefen
 echo  [2/5] Pruefe Docker Desktop...
-docker info >NUL 2>&1
+docker info 1>NUL 2>NUL
 if %errorlevel% equ 0 goto DOCKER_OK
 
 echo  [2/5] Docker nicht bereit - versuche zu starten...
-start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe" 1>NUL 2>NUL
 set /a DOCKER_WAIT=0
 
 :WARTE_DOCKER
@@ -50,9 +50,9 @@ if %DOCKER_WAIT% geq 120 (
     goto ERROR_PAUSE
 )
 echo  [2/5] Warte auf Docker... (%DOCKER_WAIT%s / 120s)
-timeout /t 5 /nobreak >NUL
+timeout /t 5 /nobreak 1>NUL
 set /a DOCKER_WAIT+=5
-docker info >NUL 2>&1
+docker info 1>NUL 2>NUL
 if %errorlevel% neq 0 goto WARTE_DOCKER
 
 :DOCKER_OK
@@ -63,7 +63,7 @@ echo.
 echo  [3/5] Pruefe Konfiguration...
 if not exist ".env" (
     if exist ".env.example" (
-        copy ".env.example" ".env" >NUL
+        copy ".env.example" ".env" 1>NUL
         echo  [3/5] .env aus .env.example erstellt.
     ) else (
         color 0C
@@ -80,7 +80,7 @@ echo  [4/5] Baue Images und starte Container...
 echo        Erster Start: 5-15 Minuten / Folgestarts: 1-2 Minuten
 echo.
 echo  Raeume alte Container auf (falls vorhanden)...
-for /f "tokens=*" %%i in ('docker ps -aq --filter name^=gutachten') do docker rm -f %%i >NUL 2>&1
+for /f "tokens=*" %%i in ('docker ps -aq --filter name^=gutachten') do docker rm -f %%i 1>NUL 2>NUL
 echo.
 echo [%TIME%] docker compose up --build -d >> "%LOG%"
 docker compose up --build -d
@@ -108,11 +108,11 @@ set /a VERSUCHE=0
 :HEALTH_CHECK
 set /a VERSUCHE+=1
 if %VERSUCHE% gtr 80 goto TIMEOUT
-powershell -NonInteractive -Command "try{$r=(Invoke-WebRequest 'http://localhost/api/v1/health' -UseBasicParsing -TimeoutSec 3 -EA Stop).StatusCode;exit ($r -ne 200)}catch{exit 1}" >NUL 2>&1
+powershell -NonInteractive -Command "try{$r=(Invoke-WebRequest 'http://localhost/api/v1/health' -UseBasicParsing -TimeoutSec 3 -EA Stop).StatusCode;exit ($r -ne 200)}catch{exit 1}" 1>NUL 2>NUL
 if %errorlevel% equ 0 goto BEREIT
 <nul set /p "=  Versuch !VERSUCHE!/80 "
 echo.
-timeout /t 3 /nobreak >NUL
+timeout /t 3 /nobreak 1>NUL
 goto HEALTH_CHECK
 
 :TIMEOUT
@@ -130,7 +130,7 @@ echo  [5/5] Anwendung bereit nach %VERSUCHE% Versuchen! OK
 echo [OK] Bereit (%TIME%) >> "%LOG%"
 
 :BROWSER
-timeout /t 1 /nobreak >NUL
+timeout /t 1 /nobreak 1>NUL
 start "" "http://localhost"
 docker compose ps >> "%LOG%" 2>&1
 
