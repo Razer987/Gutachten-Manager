@@ -2,6 +2,19 @@
 # api.Dockerfile — Express.js Backend
 # =============================================================================
 # Build-Kontext: Projektstamm (docker compose context: .)
+#
+# Architektur:
+#   Stage 1 (builder): Installiert alle Abhaengigkeiten, kompiliert die
+#                      Workspace-Pakete (shared, database, api) und erzeugt
+#                      via "pnpm deploy" ein eigenstaendiges Production-
+#                      Bundle unter /deploy mit flacher node_modules-Struktur.
+#
+#   Stage 2 (runner):  Uebernimmt ausschliesslich /deploy. Keine pnpm-Symlinks,
+#                      keine Workspace-Verweise, keine devDependencies.
+#                      Workspace-Pakete liegen als echte Ordner unter
+#                      node_modules/@gutachten/* und sind fuer Node.js direkt
+#                      ueber require('@gutachten/database') aufloesbar.
+# =============================================================================
 
 # ---- Stage 1: Builder ----
 FROM node:20-alpine AS builder
@@ -10,25 +23,35 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
-# Alle Quellen auf einmal kopieren (pnpm workspace:* braucht vollstaendige Pakete)
+# Monorepo-Manifeste
 COPY package.json pnpm-workspace.yaml turbo.json ./
+
+# Workspace-Pakete
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-# Abhaengigkeiten installieren
+# Vollinstallation inkl. devDependencies (fuer Builds und Prisma generate).
+# Erzeugt gleichzeitig die pnpm-lock.yaml, die pnpm deploy spaeter benoetigt.
 RUN pnpm install --no-frozen-lockfile
 
-# 1. Prisma-Client generieren
-RUN pnpm --filter @gutachten/database db:generate
+# Build-Reihenfolge: Prisma-Client -> shared -> database -> api
+RUN pnpm --filter @gutachten/database db:generate \
+ && pnpm --filter @gutachten/shared build \
+ && pnpm --filter @gutachten/database build \
+ && pnpm --filter api build
 
-# 2. Shared-Package kompilieren
-RUN pnpm --filter @gutachten/shared build
+# Eigenstaendiges Production-Deployment erzeugen.
+# pnpm deploy kopiert die in "files" deklarierten Inhalte der Workspace-Pakete
+# (@gutachten/database: dist + prisma, @gutachten/shared: dist) als echte
+# Ordner in /deploy/node_modules/@gutachten/* und installiert alle prod-
+# Dependencies flach. Das Ergebnis ist ein autarkes Artefakt ohne pnpm-Store.
+RUN pnpm --filter api deploy --prod /deploy
 
-# 3. Database-Package kompilieren
-RUN pnpm --filter @gutachten/database build
-
-# 4. API kompilieren
-RUN pnpm --filter api build
+# Prisma-Client in der flachen Deployment-Struktur neu generieren, damit
+# die Runtime den Client ohne pnpm-Hoisting-Hilfen findet.
+RUN cd /deploy \
+ && node_modules/.bin/prisma generate \
+      --schema node_modules/@gutachten/database/prisma/schema.prisma
 
 
 # ---- Stage 2: Runner (Production) ----
@@ -36,31 +59,22 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# postgresql-client für pg_dump (Backup-Service)
+# postgresql-client fuer pg_dump (Backup-Service)
 RUN apk add --no-cache postgresql-client
 
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser  --system --uid 1001 api
+ && adduser  --system --uid 1001 api
 
-# Compiled API
-COPY --from=builder /app/apps/api/dist ./dist
+# Autarkes Deployment uebernehmen — enthaelt package.json, dist/ und
+# node_modules/ mit allen Runtime-Abhaengigkeiten sowie den Workspace-
+# Paketen als echte Verzeichnisse.
+COPY --from=builder /deploy/package.json    ./package.json
+COPY --from=builder /deploy/dist            ./dist
+COPY --from=builder /deploy/node_modules    ./node_modules
 
-# node_modules (enthaelt alle externen Pakete + pnpm-Symlinks + .prisma)
-COPY --from=builder /app/node_modules ./node_modules
-
-# Workspace-Pakete (kompiliert)
-COPY --from=builder /app/packages/database/dist         ./packages/database/dist
-COPY --from=builder /app/packages/database/package.json  ./packages/database/package.json
-COPY --from=builder /app/packages/database/node_modules  ./packages/database/node_modules
-COPY --from=builder /app/packages/shared/dist           ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json    ./packages/shared/package.json
-
-# Prisma-Schema fuer Migration
-COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
-
-# Verzeichnisse und Rechte
+# Laufzeit-Verzeichnisse (Uploads, Logs, Backups) und Rechte
 RUN mkdir -p /app/uploads /app/logs /app/backups \
-  && chown -R api:nodejs /app/uploads /app/logs /app/backups /app/dist
+ && chown -R api:nodejs /app
 
 COPY infrastructure/docker/api-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

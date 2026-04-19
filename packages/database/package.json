@@ -5,6 +5,10 @@
   "description": "Prisma ORM Schema, Migrationen und Datenbank-Client für den Gutachten-Manager",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "prisma"
+  ],
   "scripts": {
     "build": "tsc",
     "db:generate": "prisma generate",
