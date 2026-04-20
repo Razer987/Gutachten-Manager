@@ -3,22 +3,19 @@
 # =============================================================================
 # Build-Kontext: Projektstamm (docker compose context: .)
 #
-# Architektur:
-#   Stage 1 (builder): Installiert alle Abhaengigkeiten, kompiliert das
-#                      Workspace-Paket @gutachten/shared (wird als Typ-Import
-#                      von web verwendet) und baut anschliessend die Next.js-
-#                      Anwendung mit "output: standalone".
+# Standalone-Ausgabestruktur (ohne outputFileTracingRoot):
+#   apps/web/.next/standalone/
+#     server.js          ← Einstiegspunkt (direkt im Stamm)
+#     .next/             ← Server-seitige Build-Artefakte
+#     node_modules/      ← Runtime-Dependencies
+#   apps/web/.next/static/   ← Statische Assets (separat kopieren)
+#   apps/web/public/         ← Oeffentliche Dateien (separat kopieren)
 #
-#   Stage 2 (runner):  Uebernimmt ausschliesslich das Standalone-Bundle.
-#
-# Standalone-Verzeichnisstruktur (durch outputFileTracingRoot = Monorepo-Stamm):
-#   .next/standalone/
-#     apps/web/server.js          ← Einstiegspunkt
-#     apps/web/.next/             (server-seitige Build-Artefakte)
-#     apps/web/node_modules/      (web-spezifische Runtime-Deps)
-#     node_modules/               (gehostete Deps aus dem Monorepo-Stamm)
-#   .next/static/                 ← separat kopieren
-#   public/                       ← separat kopieren
+# Im Runner:
+#   WORKDIR /app
+#   /app/server.js      → node server.js
+#   /app/.next/static/  → statische Assets
+#   /app/public/        → public files
 # =============================================================================
 
 # ---- Stage 1: Builder ----
@@ -39,10 +36,8 @@ ARG NEXT_PUBLIC_API_URL=/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# @gutachten/shared muss vor dem Next.js-Build kompiliert sein.
-# Das Paket stellt TypeScript-Typen bereit, die apps/web/src importiert.
-# Ohne dist/ wuerden die Typ-Deklarationen fehlen und der Build wuerde
-# mit unklaren Fehlern abbrechen.
+# @gutachten/shared muss zuerst kompiliert werden, damit TypeScript-Typen
+# beim Next.js-Build aufgeloest werden koennen.
 RUN pnpm --filter @gutachten/shared build \
  && pnpm --filter web build
 
@@ -58,16 +53,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
 
-# Standalone-Bundle (enthaelt server.js + node_modules in Monorepo-Struktur).
-# Durch outputFileTracingRoot liegt server.js unter apps/web/server.js.
+# Standalone-Bundle: server.js liegt direkt im Stamm des Standalone-Ordners.
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 
-# Statische Assets (CSS, JS-Chunks, Bilder) — nicht im Standalone enthalten.
-# Next.js-Server erwartet sie unter apps/web/.next/static (relativ zu WORKDIR).
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# Statische Assets — muessen separat neben dem Standalone-Bundle liegen.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 
-# Oeffentliche Dateien (favicon, robots.txt etc.)
-COPY --from=builder /app/apps/web/public ./apps/web/public
+# Oeffentliche Dateien (favicon, robots.txt, etc.)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
 
 USER nextjs
 
@@ -76,6 +69,6 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+  CMD wget -qO /dev/null http://localhost:3000/api/health || exit 1
 
-CMD ["node", "apps/web/server.js"]
+CMD ["node", "server.js"]

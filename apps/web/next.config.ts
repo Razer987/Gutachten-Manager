@@ -3,17 +3,12 @@
  * @description Next.js Konfiguration für den Gutachten-Manager.
  */
 
-import path from 'path';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Standalone-Output für Docker-Images.
-  // outputFileTracingRoot zeigt auf den Monorepo-Stamm, damit Next.js
-  // Workspace-Pakete (@gutachten/shared) korrekt in das Standalone-Bundle
-  // tracen kann. Ohne diese Angabe können pnpm-Symlinks außerhalb des
-  // app-Verzeichnisses nicht aufgelöst werden.
+  // Standalone-Output erzeugt ein autarkes Bundle fuer Docker.
+  // server.js liegt direkt im Standalone-Verzeichnis-Stamm.
   output: 'standalone',
-  outputFileTracingRoot: path.join(__dirname, '../../'),
 
   // Strenger Modus für bessere React-Fehlererkennung
   reactStrictMode: true,
@@ -44,4 +39,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
 
