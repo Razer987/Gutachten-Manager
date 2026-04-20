@@ -4,16 +4,23 @@
 # Build-Kontext: Projektstamm (docker compose context: .)
 #
 # Architektur:
-#   Stage 1 (builder): Installiert alle Abhaengigkeiten, kompiliert die
-#                      Workspace-Pakete (shared, database, api) und erzeugt
-#                      via "pnpm deploy" ein eigenstaendiges Production-
-#                      Bundle unter /deploy mit flacher node_modules-Struktur.
+#   Stage 1 (builder): Installiert alle Abhaengigkeiten, erzeugt den Prisma-
+#                      Client (Ausgabe liegt innerhalb von @gutachten/database/
+#                      generated/client), kompiliert shared / database / api
+#                      und erstellt via "pnpm deploy" ein eigenstaendiges
+#                      Production-Bundle unter /deploy mit flacher node_modules-
+#                      Struktur.
 #
 #   Stage 2 (runner):  Uebernimmt ausschliesslich /deploy. Keine pnpm-Symlinks,
-#                      keine Workspace-Verweise, keine devDependencies.
-#                      Workspace-Pakete liegen als echte Ordner unter
-#                      node_modules/@gutachten/* und sind fuer Node.js direkt
-#                      ueber require('@gutachten/database') aufloesbar.
+#                      keine devDependencies. Der generierte Prisma-Client
+#                      befindet sich unter
+#                      node_modules/@gutachten/database/generated/client
+#                      (via "files"-Feld der Workspace-package.json).
+#
+# Prisma-CLI zur Laufzeit:
+#   "prisma" ist direkte dependency von apps/api -> pnpm deploy legt die CLI
+#   nach /deploy/node_modules/.bin/prisma und macht sie fuer den Entrypoint
+#   (prisma db push) verfuegbar.
 # =============================================================================
 
 # ---- Stage 1: Builder ----
@@ -30,28 +37,25 @@ COPY package.json pnpm-workspace.yaml turbo.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 
-# Vollinstallation inkl. devDependencies (fuer Builds und Prisma generate).
-# Erzeugt gleichzeitig die pnpm-lock.yaml, die pnpm deploy spaeter benoetigt.
+# Vollinstallation inkl. devDependencies (Builds, Prisma-CLI, TypeScript).
+# Erzeugt gleichzeitig die pnpm-lock.yaml fuer pnpm deploy.
 RUN pnpm install --no-frozen-lockfile
 
 # Build-Reihenfolge: Prisma-Client -> shared -> database -> api
+# db:generate schreibt in packages/database/generated/client (siehe schema.prisma).
 RUN pnpm --filter @gutachten/database db:generate \
  && pnpm --filter @gutachten/shared build \
  && pnpm --filter @gutachten/database build \
  && pnpm --filter api build
 
 # Eigenstaendiges Production-Deployment erzeugen.
-# pnpm deploy kopiert die in "files" deklarierten Inhalte der Workspace-Pakete
-# (@gutachten/database: dist + prisma, @gutachten/shared: dist) als echte
-# Ordner in /deploy/node_modules/@gutachten/* und installiert alle prod-
-# Dependencies flach. Das Ergebnis ist ein autarkes Artefakt ohne pnpm-Store.
+# - Workspace-Pakete werden mit ihrem "files"-Inhalt als echte Ordner unter
+#   /deploy/node_modules/@gutachten/* kopiert.
+# - @gutachten/database/generated/client (der Prisma-Client) wandert mit,
+#   weil "generated" in der package.json unter "files" steht.
+# - Alle prod-Dependencies (inkl. prisma CLI und @prisma/client) werden flach
+#   unter /deploy/node_modules installiert — inklusive /deploy/node_modules/.bin.
 RUN pnpm --filter api deploy --prod /deploy
-
-# Prisma-Client in der flachen Deployment-Struktur neu generieren, damit
-# die Runtime den Client ohne pnpm-Hoisting-Hilfen findet.
-RUN cd /deploy \
- && node_modules/.bin/prisma generate \
-      --schema node_modules/@gutachten/database/prisma/schema.prisma
 
 
 # ---- Stage 2: Runner (Production) ----
@@ -65,9 +69,7 @@ RUN apk add --no-cache postgresql-client
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 api
 
-# Autarkes Deployment uebernehmen — enthaelt package.json, dist/ und
-# node_modules/ mit allen Runtime-Abhaengigkeiten sowie den Workspace-
-# Paketen als echte Verzeichnisse.
+# Autarkes Deployment uebernehmen.
 COPY --from=builder /deploy/package.json    ./package.json
 COPY --from=builder /deploy/dist            ./dist
 COPY --from=builder /deploy/node_modules    ./node_modules

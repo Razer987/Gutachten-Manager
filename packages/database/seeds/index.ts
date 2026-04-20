@@ -9,7 +9,7 @@
  *   pnpm db:seed
  */
 
-import { PrismaClient, GutachtenStatus } from '@prisma/client';
+import { PrismaClient, GutachtenStatus } from '../generated/client';
 
 const prisma = new PrismaClient();
 

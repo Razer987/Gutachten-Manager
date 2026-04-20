@@ -20,6 +20,9 @@ build/
 out/
 *.tsbuildinfo
 
+# Generierter Prisma-Client (via "prisma generate" erzeugt)
+packages/database/generated/
+
 # -------------------------------------
 # Umgebungsvariablen (NIEMALS committen!)
 # -------------------------------------

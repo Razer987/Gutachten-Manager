@@ -19,6 +19,12 @@
 
 generator client {
   provider = "prisma-client-js"
+  // Explizite Ausgabe in das Paket-Verzeichnis. Vorteil:
+  //   * Der generierte Client ist Teil des @gutachten/database Paketes
+  //     und wandert via "files" direkt in das Production-Bundle.
+  //   * Keine Abhaengigkeit mehr davon, wohin pnpm @prisma/client hoistet.
+  //   * Kein "prisma generate" im /deploy-Schritt noetig.
+  output   = "../generated/client"
 }
 
 datasource db {

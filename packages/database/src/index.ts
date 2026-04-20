@@ -11,7 +11,7 @@
  *   const gutachten = await prisma.gutachten.findMany()
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/client';
 
 // Globaler Typ für den Singleton im Development-Modus
 declare global {
@@ -41,4 +41,4 @@ export const prisma: PrismaClient =
     : (global.__prisma ?? (global.__prisma = createPrismaClient()));
 
 // Alle Prisma-Typen re-exportieren für einfache Verwendung
-export * from '@prisma/client';
+export * from '../generated/client';
