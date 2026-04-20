@@ -6,8 +6,8 @@ import path from 'path';
 import { Router } from 'express';
 import multer from 'multer';
 
-import { env } from '@/config/env';
-import { asyncHandler } from '@/middleware/error.middleware';
+import { env } from '../../config/env';
+import { asyncHandler } from '../../middleware/error.middleware';
 
 import { dateienController } from './dateien.controller';
 

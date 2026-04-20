@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/notizen/notizen.service.ts
  */
 import { prisma } from '@gutachten/database';
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 import type { CreateNotizDto, UpdateNotizDto } from './notizen.validators';
 
 export const notizenService = {

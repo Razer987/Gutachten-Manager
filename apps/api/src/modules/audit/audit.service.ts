@@ -3,7 +3,7 @@
  */
 import { prisma } from '@gutachten/database';
 
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 
 export const auditService = {
   async list(gutachtenId: string) {

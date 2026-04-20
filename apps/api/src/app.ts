@@ -24,10 +24,10 @@ import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
-import { env } from '@/config/env';
-import { logger } from '@/config/logger';
-import { errorMiddleware } from '@/middleware/error.middleware';
-import { v1Router } from '@/v1/router';
+import { env } from './config/env';
+import { logger } from './config/logger';
+import { errorMiddleware } from './middleware/error.middleware';
+import { v1Router } from './v1/router';
 
 const app = express();
 

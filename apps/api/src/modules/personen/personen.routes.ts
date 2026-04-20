@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/personen/personen.routes.ts
  */
 import { Router } from 'express';
-import { asyncHandler } from '@/middleware/error.middleware';
+import { asyncHandler } from '../../middleware/error.middleware';
 import { personenController } from './personen.controller';
 
 const router = Router({ mergeParams: true });

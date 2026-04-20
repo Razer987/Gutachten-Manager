@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/unfall/unfall.service.ts
  */
 import { prisma } from '@gutachten/database';
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 import type { UpsertUnfallDto } from './unfall.validators';
 
 export const unfallService = {

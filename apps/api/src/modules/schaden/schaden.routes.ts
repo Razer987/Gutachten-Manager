@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/schaden/schaden.routes.ts
  */
 import { Router } from 'express';
-import { asyncHandler } from '@/middleware/error.middleware';
+import { asyncHandler } from '../../middleware/error.middleware';
 import { schadenController } from './schaden.controller';
 
 const router = Router({ mergeParams: true });

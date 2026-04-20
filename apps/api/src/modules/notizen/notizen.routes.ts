@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/notizen/notizen.routes.ts
  */
 import { Router } from 'express';
-import { asyncHandler } from '@/middleware/error.middleware';
+import { asyncHandler } from '../../middleware/error.middleware';
 import { notizenController } from './notizen.controller';
 
 const router = Router({ mergeParams: true });

@@ -4,8 +4,8 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 
-import { asyncHandler } from '@/middleware/error.middleware';
-import { erstelleBackup, listeBackups } from '@/services/backup.service';
+import { asyncHandler } from '../../middleware/error.middleware';
+import { erstelleBackup, listeBackups } from '../../services/backup.service';
 
 import { adminController } from './admin.controller';
 

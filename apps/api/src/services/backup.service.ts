@@ -22,8 +22,8 @@ import { promisify } from 'util';
 
 import cron from 'node-cron';
 
-import { env } from '@/config/env';
-import { logger } from '@/config/logger';
+import { env } from '../config/env';
+import { logger } from '../config/logger';
 
 const execAsync = promisify(exec);
 

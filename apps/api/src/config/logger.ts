@@ -8,7 +8,7 @@
  *   - Automatisch rotiert (tägliche Rotation)
  *
  * Verwendung in anderen Dateien:
- *   import { logger } from '@/config/logger'
+ *   import { logger } from './config/logger'
  *   logger.info('Server gestartet auf Port 4000')
  *   logger.error('Datenbankfehler', { error: err.message })
  */

@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/personen/personen.service.ts
  */
 import { prisma } from '@gutachten/database';
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 import type { CreatePersonDto, UpdatePersonDto } from './personen.validators';
 
 export const personenService = {

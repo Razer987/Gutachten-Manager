@@ -3,7 +3,7 @@
  */
 import { Router } from 'express';
 
-import { asyncHandler } from '@/middleware/error.middleware';
+import { asyncHandler } from '../../middleware/error.middleware';
 
 import { termineController } from './termine.controller';
 

@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/aufgaben/aufgaben.service.ts
  */
 import { prisma } from '@gutachten/database';
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 import type { CreateAufgabeDto, UpdateAufgabeDto } from './aufgaben.validators';
 
 export const aufgabenService = {

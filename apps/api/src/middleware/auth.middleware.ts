@@ -17,7 +17,7 @@
  * @example
  * ```typescript
  * import jwt from 'jsonwebtoken';
- * import { env } from '@/config/env';
+ * import { env } from '../config/env';
  *
  * export async function requireAuth(req: Request, res: Response, next: NextFunction) {
  *   const authHeader = req.headers.authorization;

@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 
-import { asyncHandler } from '@/middleware/error.middleware';
+import { asyncHandler } from '../../middleware/error.middleware';
 
 import { gutachtenController } from './gutachten.controller';
 import { erstelleGutachtenPdf } from './pdf.service';

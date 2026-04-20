@@ -14,12 +14,12 @@
 
 import { prisma, type Prisma, Prisma as PrismaNamespace } from '@gutachten/database';
 
-import { generiereAktenzeichen } from '@/lib/aktenzeichen';
+import { generiereAktenzeichen } from '../../lib/aktenzeichen';
 import {
   createPaginationMeta,
   parsePagination,
-} from '@/lib/pagination';
-import { conflict, notFound } from '@/middleware/error.middleware';
+} from '../../lib/pagination';
+import { conflict, notFound } from '../../middleware/error.middleware';
 
 import type {
   CreateGutachtenDto,

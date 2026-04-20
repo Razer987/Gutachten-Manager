@@ -3,7 +3,7 @@
  */
 import { prisma, type Prisma } from '@gutachten/database';
 
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 
 import type { CreateTerminDto, TermineListQuery, UpdateTerminDto } from './termine.validators';
 

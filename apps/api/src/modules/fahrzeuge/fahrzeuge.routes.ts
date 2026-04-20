@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/fahrzeuge/fahrzeuge.routes.ts
  */
 import { Router } from 'express';
-import { asyncHandler } from '@/middleware/error.middleware';
+import { asyncHandler } from '../../middleware/error.middleware';
 import { fahrzeugeController } from './fahrzeuge.controller';
 
 const router = Router({ mergeParams: true });

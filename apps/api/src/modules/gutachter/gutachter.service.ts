@@ -3,8 +3,8 @@
  */
 import { prisma, type Prisma } from '@gutachten/database';
 
-import { createPaginationMeta, parsePagination } from '@/lib/pagination';
-import { conflict, notFound } from '@/middleware/error.middleware';
+import { createPaginationMeta, parsePagination } from '../../lib/pagination';
+import { conflict, notFound } from '../../middleware/error.middleware';
 
 import type { CreateGutachterDto, GutachterListQuery, UpdateGutachterDto } from './gutachter.validators';
 

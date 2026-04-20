@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/schaden/schaden.service.ts
  */
 import { prisma } from '@gutachten/database';
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 import type { CreateSchadenspostenDto, UpdateSchadenspostenDto } from './schaden.validators';
 
 export const schadenService = {

@@ -12,7 +12,7 @@
 import type { NextFunction, Request, Response, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 
-import { logger } from '@/config/logger';
+import { logger } from '../config/logger';
 import { API_ERROR_CODES } from '@gutachten/shared';
 
 /** Eigene Fehler-Klasse für HTTP-Fehler */

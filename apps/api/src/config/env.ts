@@ -7,7 +7,7 @@
  * mit einer klaren Fehlermeldung — statt still zu versagen.
  *
  * Verwendung:
- *   import { env } from '@/config/env'
+ *   import { env } from './config/env'
  *   console.log(env.PORT)  // typisiert als number
  */
 

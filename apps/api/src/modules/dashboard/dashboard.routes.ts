@@ -3,7 +3,7 @@
  */
 import { Router } from 'express';
 
-import { asyncHandler } from '@/middleware/error.middleware';
+import { asyncHandler } from '../../middleware/error.middleware';
 
 import { dashboardController } from './dashboard.controller';
 

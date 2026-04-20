@@ -16,8 +16,8 @@ import path from 'path';
 import type { Express } from 'express';
 import { prisma } from '@gutachten/database';
 
-import { env } from '@/config/env';
-import { notFound } from '@/middleware/error.middleware';
+import { env } from '../../config/env';
+import { notFound } from '../../middleware/error.middleware';
 
 /** Löst den absoluten Pfad einer Datei zur Laufzeit auf. */
 export function resolveUploadPath(filename: string): string {

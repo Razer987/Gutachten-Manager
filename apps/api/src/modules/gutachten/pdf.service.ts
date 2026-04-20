@@ -6,8 +6,8 @@
 import PDFDocument from 'pdfkit';
 import type { Response } from 'express';
 import { prisma } from '@gutachten/database';
-import { notFound } from '@/middleware/error.middleware';
-import { logger } from '@/config/logger';
+import { notFound } from '../../middleware/error.middleware';
+import { logger } from '../../config/logger';
 
 const STATUS_LABELS: Record<string, string> = {
   AUFGENOMMEN: 'Aufgenommen',

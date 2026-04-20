@@ -2,7 +2,7 @@
  * @file apps/api/src/modules/fahrzeuge/fahrzeuge.service.ts
  */
 import { prisma } from '@gutachten/database';
-import { notFound } from '@/middleware/error.middleware';
+import { notFound } from '../../middleware/error.middleware';
 import type { CreateFahrzeugDto, UpdateFahrzeugDto } from './fahrzeuge.validators';
 
 export const fahrzeugeService = {
