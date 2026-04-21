@@ -4,8 +4,16 @@
 # Liegt im Projektstamm, damit "docker compose up" ohne Flags funktioniert.
 # Alle Pfade sind relativ zum Projektstamm.
 #
-# Starten:  docker compose up --build -d
-# Stoppen:  docker compose down
+# ERSTSTART / RESET (deterministisch, ohne Altlasten):
+#   docker compose down -v && docker compose up --build -d
+#
+#   -v entfernt alle Volumes inkl. des PostgreSQL-Datenverzeichnisses.
+#   PostgreSQL initialisiert dann User + Datenbank neu aus den Env-Variablen.
+#   PFLICHT nach jeder Aenderung von DATABASE_USER oder DATABASE_PASSWORD.
+#
+# Normaler Neustart (Daten bleiben erhalten):
+#   docker compose up --build -d
+#
 # Logs:     docker compose logs -f
 # Status:   docker compose ps
 # =============================================================================
@@ -134,11 +142,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
     # Kein Port-Mapping: DB ist nur intern erreichbar (kein direkter Host-Zugriff)
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      # psql -c '\q' versucht eine echte Verbindung als DATABASE_USER zur
+      # DATABASE_NAME herzustellen — prueft Authentifizierung + DB-Existenz,
+      # nicht nur ob PostgreSQL TCP-Verbindungen annimmt (pg_isready).
+      test: ["CMD-SHELL", "psql -U ${DATABASE_USER} -d ${DATABASE_NAME} -c '\\q' 2>/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
     networks:
       - gutachten_network
     deploy:
