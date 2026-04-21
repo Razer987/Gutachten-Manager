@@ -1,30 +1,25 @@
 # =============================================================================
-# docker-compose.yml — Gutachten-Manager
+# docker-compose.yml — Gutachten-Manager (Produktions-Konfiguration)
 # =============================================================================
-# Liegt im Projektstamm, damit "docker compose up" ohne Flags funktioniert.
-# Alle Pfade sind relativ zum Projektstamm.
+# Verwendung (immer vom Projektstamm aus):
 #
-# ERSTSTART / RESET (deterministisch, ohne Altlasten):
-#   docker compose down -v && docker compose up --build -d
+#   Erststart / nach Credential-Änderung (Volumes werden zurückgesetzt):
+#     docker compose down -v && docker compose up --build -d
 #
-#   -v entfernt alle Volumes inkl. des PostgreSQL-Datenverzeichnisses.
-#   PostgreSQL initialisiert dann User + Datenbank neu aus den Env-Variablen.
-#   PFLICHT nach jeder Aenderung von DATABASE_USER oder DATABASE_PASSWORD.
+#   Normaler Neustart (Daten bleiben erhalten):
+#     docker compose up --build -d
 #
-# Normaler Neustart (Daten bleiben erhalten):
-#   docker compose up --build -d
-#
-# Logs:     docker compose logs -f
-# Status:   docker compose ps
+#   Logs:    docker compose logs -f
+#   Status:  docker compose ps
+#   Stoppen: docker compose down
 # =============================================================================
 
-# Fixer Projektname — unabhaengig vom Ordnernamen
 name: gutachten-manager
 
 services:
 
   # ---------------------------------------------------------------------------
-  # NGINX — Reverse-Proxy (Port 80 → Web:3000 / API:4000)
+  # NGINX — Reverse-Proxy (einziger öffentlicher Einstiegspunkt Port 80)
   # ---------------------------------------------------------------------------
   nginx:
     image: nginx:1.27-alpine
@@ -51,7 +46,8 @@ services:
           memory: 64M
 
   # ---------------------------------------------------------------------------
-  # WEB — Next.js Frontend
+  # WEB — Next.js Frontend (standalone build)
+  # Einstiegspunkt im Container: /app/apps/web/server.js
   # ---------------------------------------------------------------------------
   web:
     build:
@@ -84,7 +80,8 @@ services:
           memory: 256M
 
   # ---------------------------------------------------------------------------
-  # API — Express.js Backend (mit automatischer DB-Migration beim Start)
+  # API — Express.js Backend
+  # Prisma db push + Serverstart via api-entrypoint.sh
   # ---------------------------------------------------------------------------
   api:
     build:
@@ -94,8 +91,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 4000
-      DATABASE_URL: postgresql://${DATABASE_USER:?DATABASE_USER muss in .env gesetzt sein}:${DATABASE_PASSWORD:?DATABASE_PASSWORD muss in .env gesetzt sein}@db:5432/${DATABASE_NAME:?DATABASE_NAME muss in .env gesetzt sein}?schema=public
+      PORT: "4000"
+      DATABASE_URL: "postgresql://${DATABASE_USER:?DATABASE_USER fehlt in .env}:${DATABASE_PASSWORD:?DATABASE_PASSWORD fehlt in .env}@db:5432/${DATABASE_NAME:?DATABASE_NAME fehlt in .env}?schema=public"
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
       UPLOAD_DIR: /app/uploads
@@ -128,24 +125,27 @@ services:
           memory: 256M
 
   # ---------------------------------------------------------------------------
-  # DB — PostgreSQL Datenbank
+  # DB — PostgreSQL 16
+  # Kein Port-Mapping: nur intern über gutachten_network erreichbar.
+  #
+  # HEALTHCHECK-HINWEIS:
+  #   pg_isready prüft ob PostgreSQL Verbindungen annimmt ($POSTGRES_USER /
+  #   $POSTGRES_DB sind Container-eigene Env-Vars, kein Passwort benötigt).
+  #   Die eigentliche Authentifizierung wird in api-entrypoint.sh mit Retry
+  #   sichergestellt.
   # ---------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
     container_name: gutachten_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME muss in .env gesetzt sein}
-      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER muss in .env gesetzt sein}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD muss in .env gesetzt sein}
+      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME fehlt in .env}
+      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER fehlt in .env}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD fehlt in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Kein Port-Mapping: DB ist nur intern erreichbar (kein direkter Host-Zugriff)
     healthcheck:
-      # psql -c '\q' versucht eine echte Verbindung als DATABASE_USER zur
-      # DATABASE_NAME herzustellen — prueft Authentifizierung + DB-Existenz,
-      # nicht nur ob PostgreSQL TCP-Verbindungen annimmt (pg_isready).
-      test: ["CMD-SHELL", "psql -U ${DATABASE_USER} -d ${DATABASE_NAME} -c '\\q' 2>/dev/null || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -161,7 +161,7 @@ services:
           memory: 256M
 
 # =============================================================================
-# VOLUMES
+# VOLUMES — explizit benannte Volumes (isoliert von anderen Projekten)
 # =============================================================================
 volumes:
   postgres_data:
@@ -181,7 +181,7 @@ volumes:
     name: gutachten_nginx_logs
 
 # =============================================================================
-# NETZWERK
+# NETZWERK — isoliertes Bridge-Netzwerk für dieses Compose-Projekt
 # =============================================================================
 networks:
   gutachten_network:

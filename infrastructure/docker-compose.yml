@@ -1,33 +1,25 @@
 # =============================================================================
-# docker-compose.yml — Produktions-Konfiguration
+# infrastructure/docker-compose.yml — Alternative Compose-Datei
 # =============================================================================
-# Startet alle Services für den Produktionsbetrieb.
+# Identisch mit der Root-Compose-Datei, aber mit Port 5432 nach außen gemappt
+# (nützlich für Prisma Studio / direkten DB-Zugriff vom Host).
 #
-# Verwendung:
-#   docker compose up -d          # Alle Services im Hintergrund starten
-#   docker compose down           # Alle Services stoppen
-#   docker compose logs -f        # Live-Logs anzeigen
-#   docker compose ps             # Status aller Services
+# Verwendung (immer vom PROJEKTSTAMM aus, nicht aus diesem Verzeichnis!):
+#   docker compose -f infrastructure/docker-compose.yml up --build -d
 #
-# Services:
-#   nginx  — Reverse-Proxy (Port 80)
-#   web    — Next.js Frontend (intern Port 3000)
-#   api    — Express.js Backend (intern Port 4000)
-#   db     — PostgreSQL Datenbank (Port 5432)
+# Für den normalen Einsatz: docker-compose.yml im Projektstamm verwenden.
 # =============================================================================
+
+name: gutachten-manager
 
 services:
 
-  # ---------------------------------------------------------------------------
-  # NGINX — Reverse-Proxy (einziger öffentlicher Einstiegspunkt)
-  # ---------------------------------------------------------------------------
   nginx:
     image: nginx:1.27-alpine
     container_name: gutachten_nginx
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"  # Für zukünftiges HTTPS/SSL
     volumes:
       - ./infrastructure/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx_logs:/var/log/nginx
@@ -39,36 +31,29 @@ services:
     networks:
       - gutachten_network
 
-  # ---------------------------------------------------------------------------
-  # WEB — Next.js Frontend
-  # ---------------------------------------------------------------------------
   web:
     build:
       context: .
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api/v1}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
     container_name: gutachten_web
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api/v1}
-      INTERNAL_API_URL: http://api:4000/api/v1
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
     depends_on:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
     networks:
       - gutachten_network
 
-  # ---------------------------------------------------------------------------
-  # API — Express.js Backend
-  # ---------------------------------------------------------------------------
   api:
     build:
       context: .
@@ -77,8 +62,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 4000
-      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME:-gutachten_manager}?schema=public
+      PORT: "4000"
+      DATABASE_URL: "postgresql://${DATABASE_USER:?DATABASE_USER fehlt in .env}:${DATABASE_PASSWORD:?DATABASE_PASSWORD fehlt in .env}@db:5432/${DATABASE_NAME:?DATABASE_NAME fehlt in .env}?schema=public"
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
       UPLOAD_DIR: /app/uploads
@@ -98,40 +83,32 @@ services:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/api/v1/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 90s
     networks:
       - gutachten_network
 
-  # ---------------------------------------------------------------------------
-  # DB — PostgreSQL Datenbank
-  # ---------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
     container_name: gutachten_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:-gutachten_manager}
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      # Performance-Optimierung für diese Anwendungsgröße
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=de_DE.UTF-8"
+      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME fehlt in .env}
+      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER fehlt in .env}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD fehlt in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"  # Direkter DB-Zugriff (für Prisma Studio / Debugging)
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME:-gutachten_manager}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
     networks:
       - gutachten_network
 
-# =============================================================================
-# VOLUMES — Persistente Datenspeicherung
-# =============================================================================
 volumes:
   postgres_data:
     driver: local
@@ -149,9 +126,6 @@ volumes:
     driver: local
     name: gutachten_nginx_logs
 
-# =============================================================================
-# NETZWERK
-# =============================================================================
 networks:
   gutachten_network:
     driver: bridge
