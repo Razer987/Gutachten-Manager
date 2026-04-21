@@ -2,6 +2,7 @@
  * @file apps/api/src/modules/schaden/schaden.service.ts
  */
 import { prisma } from '@gutachten/database';
+import { findOrThrow } from '../../lib/find-or-throw';
 import { notFound } from '../../middleware/error.middleware';
 import type { CreateSchadenspostenDto, UpdateSchadenspostenDto } from './schaden.validators';
 
@@ -25,8 +26,7 @@ export const schadenService = {
   },
 
   async create(gutachtenId: string, dto: CreateSchadenspostenDto) {
-    const gutachten = await prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } });
-    if (!gutachten) { throw notFound('Gutachten', gutachtenId); }
+    await findOrThrow(prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } }), 'Gutachten', gutachtenId);
     return prisma.schadensposten.create({ data: { gutachtenId, ...dto } });
   },
 

@@ -81,6 +81,11 @@ async function start(): Promise<void> {
     logger.info(`  Port:        ${env.PORT}`);
     logger.info(`  Health-Check: http://localhost:${env.PORT}/api/v1/health`);
     logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // Sicherheitswarnung: Auth-Middleware ist noch ein Platzhalter.
+    // Jede Anfrage erhält automatisch ADMIN-Rechte — nur für Entwicklung geeignet!
+    logger.warn('⚠ SICHERHEITSWARNUNG: Auth-Middleware ist deaktiviert (Platzhalter aktiv).');
+    logger.warn('  Alle Anfragen erhalten automatisch ADMIN-Rechte.');
+    logger.warn('  Vor Produktionseinsatz JWT-Authentifizierung implementieren!');
   });
 
   // Backup-Cron starten

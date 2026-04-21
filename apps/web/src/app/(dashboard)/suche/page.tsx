@@ -29,8 +29,9 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import { sucheApi, type SucheResult } from '@/lib/api/suche.api';
+import { type GutachtenStatus } from '@/lib/api/gutachten.api';
 
-const STATUS_COLORS: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
+const STATUS_COLORS: Record<GutachtenStatus, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
   AUFGENOMMEN: 'default',
   BEAUFTRAGT: 'info',
   BESICHTIGUNG: 'primary',
@@ -40,7 +41,7 @@ const STATUS_COLORS: Record<string, 'default' | 'primary' | 'secondary' | 'error
   ARCHIV: 'default',
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<GutachtenStatus, string> = {
   AUFGENOMMEN: 'Aufgenommen',
   BEAUFTRAGT: 'Beauftragt',
   BESICHTIGUNG: 'Besichtigung',

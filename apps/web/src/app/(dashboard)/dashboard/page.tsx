@@ -27,6 +27,7 @@ import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 import { dashboardApi, type DashboardStats, type MonatsuebersichtItem } from '@/lib/api/dashboard.api';
+import { type GutachtenStatus } from '@/lib/api/gutachten.api';
 
 interface StatCardProps {
   title: string;
@@ -63,7 +64,7 @@ function StatCard({ title, value, icon, color, subtitle }: StatCardProps): React
   );
 }
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<GutachtenStatus, string> = {
   AUFGENOMMEN: 'Aufgenommen',
   BEAUFTRAGT: 'Beauftragt',
   BESICHTIGUNG: 'Besichtigung',

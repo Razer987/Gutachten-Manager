@@ -34,6 +34,13 @@ services:
         condition: service_healthy
     networks:
       - gutachten_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          memory: 64M
 
   # ---------------------------------------------------------------------------
   # WEB — Next.js Frontend
@@ -60,6 +67,13 @@ services:
       start_period: 60s
     networks:
       - gutachten_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 256M
 
   # ---------------------------------------------------------------------------
   # API — Express.js Backend (mit automatischer DB-Migration beim Start)
@@ -73,7 +87,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://${DATABASE_USER:-gutachten_user}:${DATABASE_PASSWORD:-GutachtenMgr2026}@db:5432/${DATABASE_NAME:-gutachten_manager}?schema=public
+      DATABASE_URL: postgresql://${DATABASE_USER:?DATABASE_USER muss in .env gesetzt sein}:${DATABASE_PASSWORD:?DATABASE_PASSWORD muss in .env gesetzt sein}@db:5432/${DATABASE_NAME:?DATABASE_NAME muss in .env gesetzt sein}?schema=public
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
       UPLOAD_DIR: /app/uploads
@@ -97,6 +111,13 @@ services:
       start_period: 90s
     networks:
       - gutachten_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 256M
 
   # ---------------------------------------------------------------------------
   # DB — PostgreSQL Datenbank
@@ -106,21 +127,27 @@ services:
     container_name: gutachten_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:-gutachten_manager}
-      POSTGRES_USER: ${DATABASE_USER:-gutachten_user}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-GutachtenMgr2026}
+      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME muss in .env gesetzt sein}
+      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER muss in .env gesetzt sein}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD muss in .env gesetzt sein}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Kein Port-Mapping: DB ist nur intern erreichbar (kein direkter Host-Zugriff)
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-gutachten_user} -d ${DATABASE_NAME:-gutachten_manager}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
     networks:
       - gutachten_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 256M
 
 # =============================================================================
 # VOLUMES

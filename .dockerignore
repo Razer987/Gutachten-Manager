@@ -1,0 +1,65 @@
+# =============================================================================
+# .dockerignore — Docker Build Context Filter
+# =============================================================================
+# Verhindert, dass unnötige Dateien in den Build-Kontext gelangen.
+# Beschleunigt Builds und verhindert Lecks von Secrets.
+
+# Versionskontrolle
+.git
+.gitignore
+
+# Node-Abhängigkeiten (werden im Container neu installiert)
+node_modules
+**/node_modules
+
+# Next.js Build-Artefakte
+apps/web/.next
+apps/web/out
+
+# TypeScript Build-Ausgabe
+dist
+**/dist
+
+# Prisma generierter Client
+packages/database/generated
+
+# Logs
+*.log
+logs
+**/logs
+
+# Umgebungsvariablen (NIEMALS im Image!)
+.env
+.env.*
+!.env.example
+
+# Entwicklerwerkzeuge
+.eslintcache
+.turbo
+**/.turbo
+
+# Tests & Coverage
+coverage
+**/.nyc_output
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
+**/*.test.tsx
+**/*.spec.tsx
+
+# CI/CD
+.github
+
+# Dokumentation
+*.md
+docs
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo

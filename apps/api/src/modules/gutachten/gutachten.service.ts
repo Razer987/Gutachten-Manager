@@ -15,11 +15,12 @@
 import { prisma, type Prisma, Prisma as PrismaNamespace } from '@gutachten/database';
 
 import { generiereAktenzeichen } from '../../lib/aktenzeichen';
+import { findOrThrow } from '../../lib/find-or-throw';
 import {
   createPaginationMeta,
   parsePagination,
 } from '../../lib/pagination';
-import { conflict, notFound } from '../../middleware/error.middleware';
+import { conflict } from '../../middleware/error.middleware';
 
 import type {
   CreateGutachtenDto,
@@ -124,13 +125,11 @@ export const gutachtenService = {
    * Ein einzelnes Gutachten abrufen (vollständig)
    */
   async findById(id: string) {
-    const gutachten = await prisma.gutachten.findUnique({
-      where: { id },
-      select: GUTACHTEN_DETAIL_SELECT,
-    });
-
-    if (!gutachten) { throw notFound('Gutachten', id); }
-    return gutachten;
+    return findOrThrow(
+      prisma.gutachten.findUnique({ where: { id }, select: GUTACHTEN_DETAIL_SELECT }),
+      'Gutachten',
+      id,
+    );
   },
 
   /**
@@ -209,12 +208,14 @@ export const gutachtenService = {
    * Gutachten bearbeiten
    */
   async update(id: string, dto: UpdateGutachtenDto) {
-    // Existenz prüfen
-    const existing = await prisma.gutachten.findUnique({
-      where: { id },
-      select: { id: true, aktenzeichen: true, status: true, titel: true },
-    });
-    if (!existing) { throw notFound('Gutachten', id); }
+    const existing = await findOrThrow(
+      prisma.gutachten.findUnique({
+        where: { id },
+        select: { id: true, aktenzeichen: true, status: true, titel: true },
+      }),
+      'Gutachten',
+      id,
+    );
 
     // Wenn Aktenzeichen geändert wird: Duplikat-Prüfung
     if (dto.aktenzeichen && dto.aktenzeichen !== existing.aktenzeichen) {
@@ -263,11 +264,14 @@ export const gutachtenService = {
    * Status eines Gutachtens ändern
    */
   async updateStatus(id: string, dto: UpdateStatusDto) {
-    const existing = await prisma.gutachten.findUnique({
-      where: { id },
-      select: { id: true, aktenzeichen: true, status: true },
-    });
-    if (!existing) { throw notFound('Gutachten', id); }
+    const existing = await findOrThrow(
+      prisma.gutachten.findUnique({
+        where: { id },
+        select: { id: true, aktenzeichen: true, status: true },
+      }),
+      'Gutachten',
+      id,
+    );
 
     const updates: Prisma.GutachtenUpdateInput = { status: dto.status };
 
@@ -303,11 +307,14 @@ export const gutachtenService = {
    * Gutachten löschen (soft delete: in ARCHIV verschieben)
    */
   async delete(id: string) {
-    const existing = await prisma.gutachten.findUnique({
-      where: { id },
-      select: { id: true, aktenzeichen: true },
-    });
-    if (!existing) { throw notFound('Gutachten', id); }
+    const existing = await findOrThrow(
+      prisma.gutachten.findUnique({
+        where: { id },
+        select: { id: true, aktenzeichen: true },
+      }),
+      'Gutachten',
+      id,
+    );
 
     // Statt hartem Löschen: In ARCHIV verschieben
     await prisma.gutachten.update({
@@ -331,15 +338,13 @@ export const gutachtenService = {
    * Zwei Gutachten miteinander verknüpfen
    */
   async verknuepfen(id: string, zielId: string) {
-    // Beide müssen existieren
-    const [quelle, ziel] = await Promise.all([
-      prisma.gutachten.findUnique({ where: { id }, select: { id: true } }),
-      prisma.gutachten.findUnique({ where: { id: zielId }, select: { id: true } }),
-    ]);
-
-    if (!quelle) { throw notFound('Gutachten', id); }
-    if (!ziel) { throw notFound('Gutachten', zielId); }
     if (id === zielId) { throw conflict('Ein Gutachten kann nicht mit sich selbst verknüpft werden.'); }
+
+    // Beide Gutachten müssen existieren — parallel prüfen
+    await Promise.all([
+      findOrThrow(prisma.gutachten.findUnique({ where: { id }, select: { id: true } }), 'Gutachten', id),
+      findOrThrow(prisma.gutachten.findUnique({ where: { id: zielId }, select: { id: true } }), 'Gutachten', zielId),
+    ]);
 
     await prisma.gutachten.update({
       where: { id },

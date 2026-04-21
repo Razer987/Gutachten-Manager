@@ -3,12 +3,11 @@
  */
 import { prisma } from '@gutachten/database';
 
-import { notFound } from '../../middleware/error.middleware';
+import { findOrThrow } from '../../lib/find-or-throw';
 
 export const auditService = {
   async list(gutachtenId: string) {
-    const gutachten = await prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } });
-    if (!gutachten) { throw notFound('Gutachten', gutachtenId); }
+    await findOrThrow(prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } }), 'Gutachten', gutachtenId);
 
     return prisma.auditLog.findMany({
       where: { gutachtenId },

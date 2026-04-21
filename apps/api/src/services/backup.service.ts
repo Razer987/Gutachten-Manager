@@ -96,7 +96,7 @@ async function erstelleBackup(): Promise<void> {
       : '?';
     logger.info(`Backup erfolgreich: ${dateiname} (${groesse} KB, ${dauer}ms)`);
 
-    await bereinigePalteBackups();
+    await bereinigeAlteBackups();
   } catch (error) {
     // Teilweise erstellte Datei aufräumen
     if (fs.existsSync(dateipfad)) {
@@ -112,7 +112,7 @@ async function erstelleBackup(): Promise<void> {
 /**
  * Löscht Backup-Dateien die älter als BACKUP_RETENTION_DAYS sind.
  */
-async function bereinigePalteBackups(): Promise<void> {
+async function bereinigeAlteBackups(): Promise<void> {
   const grenzeDatum = Date.now() - env.BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
   const backupDir = path.resolve(env.BACKUP_DIR);
 

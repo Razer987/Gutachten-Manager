@@ -39,8 +39,9 @@ import {
 
 import { dashboardApi, type DashboardStats, type MonatsuebersichtItem } from '@/lib/api/dashboard.api';
 import type { GutachtenListItem } from '@/lib/api/gutachten.api';
+import { type GutachtenStatus } from '@/lib/api/gutachten.api';
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<GutachtenStatus, string> = {
   AUFGENOMMEN: 'Aufgenommen',
   BEAUFTRAGT: 'Beauftragt',
   BESICHTIGUNG: 'Besichtigung',

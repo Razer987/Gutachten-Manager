@@ -2,6 +2,7 @@
  * @file apps/api/src/modules/aufgaben/aufgaben.service.ts
  */
 import { prisma } from '@gutachten/database';
+import { findOrThrow } from '../../lib/find-or-throw';
 import { notFound } from '../../middleware/error.middleware';
 import type { CreateAufgabeDto, UpdateAufgabeDto } from './aufgaben.validators';
 
@@ -14,13 +15,16 @@ export const aufgabenService = {
   },
 
   async create(gutachtenId: string, dto: CreateAufgabeDto) {
-    const gutachten = await prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } });
-    if (!gutachten) { throw notFound('Gutachten', gutachtenId); }
+    await findOrThrow(prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } }), 'Gutachten', gutachtenId);
+    // dto.faelligAm ist bereits ein Date-Objekt (Zod-Transformation in Validator)
     return prisma.aufgabe.create({
       data: {
         gutachtenId,
-        ...dto,
-        faelligAm: dto.faelligAm ? new Date(dto.faelligAm) : null,
+        titel: dto.titel,
+        erledigt: dto.erledigt,
+        faelligAm: dto.faelligAm ?? null,
+        prioritaet: dto.prioritaet,
+        zugewiesen: dto.zugewiesen ?? null,
       },
     });
   },
@@ -29,15 +33,17 @@ export const aufgabenService = {
     const existing = await prisma.aufgabe.findFirst({ where: { id, gutachtenId }, select: { id: true } });
     if (!existing) { throw notFound('Aufgabe', id); }
 
-    const data: Parameters<typeof prisma.aufgabe.update>[0]['data'] = { ...dto };
-    if (dto.faelligAm !== undefined) {
-      data.faelligAm = dto.faelligAm ? new Date(dto.faelligAm) : null;
-    }
-    if (dto.erledigt === true) {
-      data.erledigtAm = new Date();
-    }
-
-    return prisma.aufgabe.update({ where: { id }, data });
+    return prisma.aufgabe.update({
+      where: { id },
+      data: {
+        ...(dto.titel !== undefined && { titel: dto.titel }),
+        ...(dto.erledigt !== undefined && { erledigt: dto.erledigt }),
+        ...(dto.faelligAm !== undefined && { faelligAm: dto.faelligAm ?? null }),
+        ...(dto.prioritaet !== undefined && { prioritaet: dto.prioritaet }),
+        ...(dto.zugewiesen !== undefined && { zugewiesen: dto.zugewiesen ?? null }),
+        ...(dto.erledigt === true && { erledigtAm: new Date() }),
+      },
+    });
   },
 
   async delete(gutachtenId: string, id: string) {

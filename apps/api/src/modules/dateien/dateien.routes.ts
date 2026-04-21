@@ -7,7 +7,7 @@ import { Router } from 'express';
 import multer from 'multer';
 
 import { env } from '../../config/env';
-import { asyncHandler } from '../../middleware/error.middleware';
+import { AppError, asyncHandler } from '../../middleware/error.middleware';
 
 import { dateienController } from './dateien.controller';
 
@@ -35,7 +35,8 @@ const upload = multer({
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error(`Dateityp nicht erlaubt: ${file.mimetype}`));
+      // AppError statt Error — wird von errorMiddleware als 400 behandelt
+      cb(new AppError(400, 'INVALID_FILE_TYPE', `Dateityp nicht erlaubt: ${file.mimetype}`));
     }
   },
 });

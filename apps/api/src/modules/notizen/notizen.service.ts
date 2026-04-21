@@ -2,6 +2,7 @@
  * @file apps/api/src/modules/notizen/notizen.service.ts
  */
 import { prisma } from '@gutachten/database';
+import { findOrThrow } from '../../lib/find-or-throw';
 import { notFound } from '../../middleware/error.middleware';
 import type { CreateNotizDto, UpdateNotizDto } from './notizen.validators';
 
@@ -14,8 +15,7 @@ export const notizenService = {
   },
 
   async create(gutachtenId: string, dto: CreateNotizDto) {
-    const gutachten = await prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } });
-    if (!gutachten) { throw notFound('Gutachten', gutachtenId); }
+    await findOrThrow(prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } }), 'Gutachten', gutachtenId);
     return prisma.notiz.create({ data: { gutachtenId, ...dto } });
   },
 

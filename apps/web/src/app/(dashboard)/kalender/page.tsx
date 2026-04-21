@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import AddIcon from '@mui/icons-material/Add';
 import Box from '@mui/material/Box';
@@ -40,7 +40,7 @@ export default function KalenderPage(): React.JSX.Element {
     beschreibung: '',
   });
 
-  const loadTermine = () => {
+  const loadTermine = useCallback(() => {
     const now = new Date();
     const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
     setLoading(true);
@@ -49,9 +49,9 @@ export default function KalenderPage(): React.JSX.Element {
       .then(setTermine)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(loadTermine, []);
+  useEffect(loadTermine, [loadTermine]);
 
   const handleSave = async () => {
     if (!newTermin.titel || !newTermin.start || !newTermin.ende) { return; }

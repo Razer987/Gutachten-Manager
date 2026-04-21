@@ -3,7 +3,7 @@
  */
 import { prisma, type Prisma } from '@gutachten/database';
 
-import { notFound } from '../../middleware/error.middleware';
+import { findOrThrow } from '../../lib/find-or-throw';
 
 import type { CreateTerminDto, TermineListQuery, UpdateTerminDto } from './termine.validators';
 
@@ -32,12 +32,14 @@ export const termineService = {
 
   /** Gibt einen einzelnen Termin zurück. Wirft 404 wenn nicht gefunden. */
   async findById(id: string) {
-    const termin = await prisma.termin.findUnique({
-      where: { id },
-      include: { gutachten: { select: { id: true, aktenzeichen: true, titel: true } } },
-    });
-    if (!termin) { throw notFound('Termin', id); }
-    return termin;
+    return findOrThrow(
+      prisma.termin.findUnique({
+        where: { id },
+        include: { gutachten: { select: { id: true, aktenzeichen: true, titel: true } } },
+      }),
+      'Termin',
+      id,
+    );
   },
 
   /** Erstellt einen neuen Termin. ISO-8601-Datumsstrings werden in Date-Objekte konvertiert. */
@@ -61,8 +63,7 @@ export const termineService = {
 
   /** Aktualisiert einen Termin (nur übermittelte Felder). Wirft 404 wenn nicht gefunden. */
   async update(id: string, dto: UpdateTerminDto) {
-    const existing = await prisma.termin.findUnique({ where: { id }, select: { id: true } });
-    if (!existing) { throw notFound('Termin', id); }
+    await findOrThrow(prisma.termin.findUnique({ where: { id }, select: { id: true } }), 'Termin', id);
 
     return prisma.termin.update({
       where: { id },
@@ -83,8 +84,7 @@ export const termineService = {
 
   /** Löscht einen Termin. Wirft 404 wenn nicht gefunden. */
   async delete(id: string) {
-    const existing = await prisma.termin.findUnique({ where: { id }, select: { id: true } });
-    if (!existing) { throw notFound('Termin', id); }
+    await findOrThrow(prisma.termin.findUnique({ where: { id }, select: { id: true } }), 'Termin', id);
     await prisma.termin.delete({ where: { id } });
     return { message: 'Termin wurde gelöscht.' };
   },

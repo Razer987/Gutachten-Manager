@@ -10,10 +10,12 @@
  */
 
 import type { NextFunction, Request, Response, RequestHandler } from 'express';
+import multer from 'multer';
 import { ZodError } from 'zod';
 
-import { logger } from '../config/logger';
 import { API_ERROR_CODES } from '@gutachten/shared';
+
+import { logger } from '../config/logger';
 
 /** Eigene Fehler-Klasse für HTTP-Fehler */
 export class AppError extends Error {
@@ -66,6 +68,23 @@ export function errorMiddleware(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction,
 ): void {
+  // Multer-Fehler (Dateigröße, Feldanzahl etc.) — immer 400
+  if (err instanceof multer.MulterError) {
+    const messages: Record<string, string> = {
+      LIMIT_FILE_SIZE: 'Die Datei überschreitet die maximal erlaubte Größe.',
+      LIMIT_FILE_COUNT: 'Zu viele Dateien wurden hochgeladen.',
+      LIMIT_UNEXPECTED_FILE: 'Unerwartetes Dateifeld im Upload.',
+    };
+    res.status(400).json({
+      success: false,
+      error: {
+        code: API_ERROR_CODES.BAD_REQUEST,
+        message: messages[err.code] ?? `Upload-Fehler: ${err.message}`,
+      },
+    });
+    return;
+  }
+
   // Zod-Validierungsfehler (ungültige Request-Daten)
   if (err instanceof ZodError) {
     res.status(400).json({

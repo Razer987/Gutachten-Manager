@@ -2,6 +2,7 @@
  * @file apps/api/src/modules/fahrzeuge/fahrzeuge.service.ts
  */
 import { prisma } from '@gutachten/database';
+import { findOrThrow } from '../../lib/find-or-throw';
 import { notFound } from '../../middleware/error.middleware';
 import type { CreateFahrzeugDto, UpdateFahrzeugDto } from './fahrzeuge.validators';
 
@@ -24,8 +25,7 @@ export const fahrzeugeService = {
   },
 
   async create(gutachtenId: string, dto: CreateFahrzeugDto) {
-    const gutachten = await prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } });
-    if (!gutachten) { throw notFound('Gutachten', gutachtenId); }
+    await findOrThrow(prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } }), 'Gutachten', gutachtenId);
     return prisma.fahrzeug.create({ data: { gutachtenId, ...dto } });
   },
 

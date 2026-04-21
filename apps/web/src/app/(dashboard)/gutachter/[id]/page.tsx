@@ -34,9 +34,9 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 import { gutachterApi, type Gutachter } from '@/lib/api/gutachter.api';
-import { gutachtenApi, type Gutachten } from '@/lib/api/gutachten.api';
+import { gutachtenApi, type Gutachten, type GutachtenStatus } from '@/lib/api/gutachten.api';
 
-const STATUS_COLORS: Record<string, 'default' | 'primary' | 'warning' | 'success' | 'error'> = {
+const STATUS_COLORS: Record<GutachtenStatus, 'default' | 'primary' | 'warning' | 'success' | 'error'> = {
   AUFGENOMMEN: 'default',
   BEAUFTRAGT: 'primary',
   BESICHTIGUNG: 'primary',
@@ -46,7 +46,7 @@ const STATUS_COLORS: Record<string, 'default' | 'primary' | 'warning' | 'success
   ARCHIV: 'default',
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<GutachtenStatus, string> = {
   AUFGENOMMEN: 'Aufgenommen',
   BEAUFTRAGT: 'Beauftragt',
   BESICHTIGUNG: 'Besichtigung',

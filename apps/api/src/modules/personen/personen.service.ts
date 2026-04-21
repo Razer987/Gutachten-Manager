@@ -2,6 +2,7 @@
  * @file apps/api/src/modules/personen/personen.service.ts
  */
 import { prisma } from '@gutachten/database';
+import { findOrThrow } from '../../lib/find-or-throw';
 import { notFound } from '../../middleware/error.middleware';
 import type { CreatePersonDto, UpdatePersonDto } from './personen.validators';
 
@@ -24,8 +25,7 @@ export const personenService = {
   },
 
   async create(gutachtenId: string, dto: CreatePersonDto) {
-    const gutachten = await prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } });
-    if (!gutachten) { throw notFound('Gutachten', gutachtenId); }
+    await findOrThrow(prisma.gutachten.findUnique({ where: { id: gutachtenId }, select: { id: true } }), 'Gutachten', gutachtenId);
     return prisma.person.create({
       data: {
         gutachtenId,

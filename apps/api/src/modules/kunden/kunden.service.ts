@@ -3,8 +3,9 @@
  */
 import { prisma, type Prisma } from '@gutachten/database';
 
+import { findOrThrow } from '../../lib/find-or-throw';
 import { createPaginationMeta, parsePagination } from '../../lib/pagination';
-import { conflict, notFound } from '../../middleware/error.middleware';
+import { conflict } from '../../middleware/error.middleware';
 
 import type { CreateKundeDto, KontaktHistorieDto, KundenListQuery, UpdateKundeDto } from './kunden.validators';
 
@@ -57,19 +58,21 @@ export const kundenService = {
 
   /** Gibt einen Kunden inkl. Kontakthistorie und verknüpften Gutachten zurück. Wirft 404 wenn nicht gefunden. */
   async findById(id: string) {
-    const kunde = await prisma.kunde.findUnique({
-      where: { id },
-      include: {
-        kontakthistorie: { orderBy: { kontaktDat: 'desc' }, take: 50 },
-        gutachten: {
-          select: { id: true, aktenzeichen: true, titel: true, status: true, createdAt: true },
-          orderBy: { createdAt: 'desc' },
-          take: 20,
+    return findOrThrow(
+      prisma.kunde.findUnique({
+        where: { id },
+        include: {
+          kontakthistorie: { orderBy: { kontaktDat: 'desc' }, take: 50 },
+          gutachten: {
+            select: { id: true, aktenzeichen: true, titel: true, status: true, createdAt: true },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+          },
         },
-      },
-    });
-    if (!kunde) { throw notFound('Kunde', id); }
-    return kunde;
+      }),
+      'Kunde',
+      id,
+    );
   },
 
   /** Erstellt einen neuen Kunden und gibt ihn zurück. */
@@ -79,8 +82,7 @@ export const kundenService = {
 
   /** Aktualisiert einen bestehenden Kunden. Wirft 404 wenn nicht gefunden. */
   async update(id: string, dto: UpdateKundeDto) {
-    const existing = await prisma.kunde.findUnique({ where: { id }, select: { id: true } });
-    if (!existing) { throw notFound('Kunde', id); }
+    await findOrThrow(prisma.kunde.findUnique({ where: { id }, select: { id: true } }), 'Kunde', id);
     return prisma.kunde.update({ where: { id }, data: dto, select: KUNDE_SELECT });
   },
 
@@ -92,21 +94,24 @@ export const kundenService = {
    * auf NULL gesetzt (onDelete: SetNull im Schema).
    */
   async delete(id: string) {
-    const existing = await prisma.kunde.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        nachname: true,
-        _count: {
-          select: {
-            gutachten: {
-              where: { status: { notIn: ['FERTIG', 'ARCHIV'] } },
+    const existing = await findOrThrow(
+      prisma.kunde.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          nachname: true,
+          _count: {
+            select: {
+              gutachten: {
+                where: { status: { notIn: ['FERTIG', 'ARCHIV'] } },
+              },
             },
           },
         },
-      },
-    });
-    if (!existing) { throw notFound('Kunde', id); }
+      }),
+      'Kunde',
+      id,
+    );
 
     if (existing._count.gutachten > 0) {
       throw conflict(
@@ -121,8 +126,7 @@ export const kundenService = {
 
   /** Fügt einen neuen Kontakthistorie-Eintrag zu einem Kunden hinzu. */
   async addKontakt(kundeId: string, dto: KontaktHistorieDto) {
-    const existing = await prisma.kunde.findUnique({ where: { id: kundeId }, select: { id: true } });
-    if (!existing) { throw notFound('Kunde', kundeId); }
+    await findOrThrow(prisma.kunde.findUnique({ where: { id: kundeId }, select: { id: true } }), 'Kunde', kundeId);
     return prisma.kontaktHistorie.create({
       data: {
         kundeId,
