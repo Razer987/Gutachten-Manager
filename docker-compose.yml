@@ -1,17 +1,13 @@
 # =============================================================================
-# docker-compose.yml — Gutachten-Manager (Produktions-Konfiguration)
+# docker-compose.yml — Gutachten-Manager
 # =============================================================================
-# Verwendung (immer vom Projektstamm aus):
 #
-#   Erststart / nach Credential-Änderung (Volumes werden zurückgesetzt):
-#     docker compose down -v && docker compose up --build -d
+# Start (clean):  docker compose down -v && docker compose up --build -d
+# Start (normal): docker compose up --build -d
+# Logs:           docker compose logs -f [service]
+# Stop:           docker compose down
 #
-#   Normaler Neustart (Daten bleiben erhalten):
-#     docker compose up --build -d
-#
-#   Logs:    docker compose logs -f
-#   Status:  docker compose ps
-#   Stoppen: docker compose down
+# Voraussetzung: .env mit POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 # =============================================================================
 
 name: gutachten-manager
@@ -19,35 +15,92 @@ name: gutachten-manager
 services:
 
   # ---------------------------------------------------------------------------
-  # NGINX — Reverse-Proxy (einziger öffentlicher Einstiegspunkt Port 80)
+  # PostgreSQL — Datenbank
+  #
+  # Verwendet POSTGRES_* direkt aus .env.
+  # Kein Port nach außen: DB ist nur im internen Netzwerk erreichbar.
+  #
+  # Healthcheck: pg_isready prüft ob PostgreSQL Verbindungen annimmt.
+  # Der Docker-eigene Postgres-Entrypoint stellt sicher, dass User + DB
+  # vollständig initialisiert sind bevor pg_isready 0 zurückgibt.
   # ---------------------------------------------------------------------------
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: gutachten_nginx
+  db:
+    image: postgres:16-alpine
+    container_name: gutachten_db
     restart: unless-stopped
-    ports:
-      - "80:80"
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:?POSTGRES_USER fehlt in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt in .env}
+      POSTGRES_DB:       ${POSTGRES_DB:?POSTGRES_DB fehlt in .env}
     volumes:
-      - ./infrastructure/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      web:
-        condition: service_healthy
-      api:
-        condition: service_healthy
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -q"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
-      - gutachten_network
+      - internal
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 128M
-        reservations:
-          memory: 64M
+          cpus: '1.0'
+          memory: 512M
 
   # ---------------------------------------------------------------------------
-  # WEB — Next.js Frontend (standalone build)
-  # Einstiegspunkt im Container: /app/apps/web/server.js
+  # API — Express.js / Prisma
+  #
+  # DATABASE_URL wird aus denselben POSTGRES_*-Variablen gebaut wie die DB.
+  # Mismatch ist strukturell unmöglich.
+  #
+  # Startet erst wenn db: service_healthy ist.
+  # Entrypoint: prisma db push (einmalig) → node dist/server.js
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    container_name: gutachten_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public"
+      CORS_ORIGINS:             ${CORS_ORIGINS:-http://localhost}
+      MAX_UPLOAD_SIZE_MB:       ${MAX_UPLOAD_SIZE_MB:-50}
+      UPLOAD_DIR:               /app/uploads
+      LOG_LEVEL:                ${LOG_LEVEL:-info}
+      LOG_DIR:                  /app/logs
+      BACKUP_DIR:               /app/backups
+      BACKUP_RETENTION_DAYS:    ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_CRON_SCHEDULE:     ${BACKUP_CRON_SCHEDULE:-0 2 * * *}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+      - backups_data:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Web — Next.js (standalone)
+  #
+  # Einstiegspunkt: /app/apps/web/server.js
+  # Startet erst wenn api: service_healthy ist.
   # ---------------------------------------------------------------------------
   web:
     build:
@@ -65,125 +118,64 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    networks:
-      - gutachten_network
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          memory: 256M
-
-  # ---------------------------------------------------------------------------
-  # API — Express.js Backend
-  # Prisma db push + Serverstart via api-entrypoint.sh
-  # ---------------------------------------------------------------------------
-  api:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/api.Dockerfile
-    container_name: gutachten_api
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      PORT: "4000"
-      DATABASE_URL: "postgresql://${DATABASE_USER:?DATABASE_USER fehlt in .env}:${DATABASE_PASSWORD:?DATABASE_PASSWORD fehlt in .env}@db:5432/${DATABASE_NAME:?DATABASE_NAME fehlt in .env}?schema=public"
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
-      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
-      UPLOAD_DIR: /app/uploads
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      LOG_DIR: /app/logs
-      BACKUP_DIR: /app/backups
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
-      BACKUP_CRON_SCHEDULE: ${BACKUP_CRON_SCHEDULE:-0 2 * * *}
-    volumes:
-      - uploads_data:/app/uploads
-      - logs_data:/app/logs
-      - backups_data:/app/backups
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/api/v1/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
-    networks:
-      - gutachten_network
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          memory: 256M
-
-  # ---------------------------------------------------------------------------
-  # DB — PostgreSQL 16
-  # Kein Port-Mapping: nur intern über gutachten_network erreichbar.
-  #
-  # HEALTHCHECK-HINWEIS:
-  #   pg_isready prüft ob PostgreSQL Verbindungen annimmt ($POSTGRES_USER /
-  #   $POSTGRES_DB sind Container-eigene Env-Vars, kein Passwort benötigt).
-  #   Die eigentliche Authentifizierung wird in api-entrypoint.sh mit Retry
-  #   sichergestellt.
-  # ---------------------------------------------------------------------------
-  db:
-    image: postgres:16-alpine
-    container_name: gutachten_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME fehlt in .env}
-      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER fehlt in .env}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD fehlt in .env}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
     networks:
-      - gutachten_network
+      - internal
     deploy:
       resources:
         limits:
           cpus: '1.0'
           memory: 512M
-        reservations:
-          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # Nginx — Reverse-Proxy (Port 80 → Web / API)
+  #
+  # Startet erst wenn web + api healthy sind.
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: gutachten_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
 
 # =============================================================================
-# VOLUMES — explizit benannte Volumes (isoliert von anderen Projekten)
+# Volumes — explizit benannt, gehören exklusiv zu diesem Compose-Projekt
 # =============================================================================
 volumes:
   postgres_data:
-    driver: local
     name: gutachten_postgres_data
   uploads_data:
-    driver: local
     name: gutachten_uploads
   logs_data:
-    driver: local
     name: gutachten_logs
   backups_data:
-    driver: local
     name: gutachten_backups
   nginx_logs:
-    driver: local
     name: gutachten_nginx_logs
 
 # =============================================================================
-# NETZWERK — isoliertes Bridge-Netzwerk für dieses Compose-Projekt
+# Netzwerk — isoliertes internes Netz, kein externer Zugriff
 # =============================================================================
 networks:
-  gutachten_network:
+  internal:
+    name: gutachten_internal
     driver: bridge
-    name: gutachten_network
