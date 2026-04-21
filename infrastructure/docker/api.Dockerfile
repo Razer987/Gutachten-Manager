@@ -28,6 +28,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# CA-Zertifikat fuer SSL-Inspection-Proxy einbinden (Sandbox-Umgebung).
+# NODE_EXTRA_CA_CERTS wird benoetigt damit Node.js/corepack/npm dem Proxy-Zertifikat vertrauen.
+COPY infrastructure/docker/anthropic-sandbox-ca.crt /usr/local/share/ca-certificates/anthropic-sandbox-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/anthropic-sandbox-ca.crt
+
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Monorepo-Manifeste
@@ -62,6 +67,10 @@ RUN pnpm --filter api deploy --prod /deploy
 FROM node:20-alpine AS runner
 
 WORKDIR /app
+
+# CA-Zertifikat einbinden damit apk add funktioniert
+COPY infrastructure/docker/anthropic-sandbox-ca.crt /usr/local/share/ca-certificates/anthropic-sandbox-ca.crt
+RUN cat /usr/local/share/ca-certificates/anthropic-sandbox-ca.crt >> /etc/ssl/certs/ca-certificates.crt
 
 # postgresql-client fuer pg_dump (Backup-Service)
 RUN apk add --no-cache postgresql-client

@@ -13,25 +13,30 @@
 #
 #   .next/standalone/             (Ausgabe des Builders)
 #     apps/web/
-#       server.js                 ← Einstiegspunkt
-#       .next/                    ← Server-seitige Artefakte
-#       node_modules/             ← web-spezifische Deps
-#     node_modules/               ← gehostete Deps aus Monorepo-Stamm
+#       server.js                 <- Einstiegspunkt
+#       .next/                    <- Server-seitige Artefakte
+#       node_modules/             <- web-spezifische Deps
+#     node_modules/               <- gehostete Deps aus Monorepo-Stamm
 #
-#   Nach COPY standalone → /app/:
-#     /app/apps/web/server.js     → CMD: node apps/web/server.js
-#     /app/apps/web/.next/        → Server-Artefakte (im standalone enthalten)
-#     /app/node_modules/          → Gehostete Deps
+#   Nach COPY standalone -> /app/:
+#     /app/apps/web/server.js     -> CMD: node apps/web/server.js
+#     /app/apps/web/.next/        -> Server-Artefakte (im standalone enthalten)
+#     /app/node_modules/          -> Gehostete Deps
 #
 #   Separat kopiert (nicht im standalone enthalten):
-#     /app/apps/web/.next/static/ → statische Assets (CSS, JS-Chunks)
-#     /app/apps/web/public/       → oeffentliche Dateien
+#     /app/apps/web/.next/static/ -> statische Assets (CSS, JS-Chunks)
+#     /app/apps/web/public/       -> oeffentliche Dateien
 # =============================================================================
 
 # ---- Stage 1: Builder ----
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+# CA-Zertifikat fuer SSL-Inspection-Proxy einbinden (Sandbox-Umgebung).
+# NODE_EXTRA_CA_CERTS wird benoetigt damit Node.js/corepack/npm dem Proxy-Zertifikat vertrauen.
+COPY infrastructure/docker/anthropic-sandbox-ca.crt /usr/local/share/ca-certificates/anthropic-sandbox-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/anthropic-sandbox-ca.crt
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
